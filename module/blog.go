@@ -1,7 +1,7 @@
 package module
 
 // 博客表
-type Account struct {
+type Blog struct {
 	ID         int    `gorm:"primary_key" json:"id"`             // 主键
 	AuthorID   int    `json:"author_id"`                         // 作者id
 	Title      string `json:"title" gorm:"not null"`             // 标题
