@@ -1,4 +1,4 @@
-package module
+package model
 
 // 博客表
 type Blog struct {

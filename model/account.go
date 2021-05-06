@@ -1,4 +1,4 @@
-package module
+package model
 
 // 账户表
 type Account struct {
