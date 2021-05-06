@@ -15,7 +15,12 @@ func printf(w http.ResponseWriter, r *http.Request)  {
 }
 
 func main() {
+	//初始化数据库
 	db.InitDb()
-	http.HandleFunc("/", printf)
+
+	//路由注册
+
+
+	//启动服务器
 	log.Fatal(http.ListenAndServe(utils.HttpPort, nil))
 }
