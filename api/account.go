@@ -24,11 +24,14 @@ import (
 func AddUser(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
-			code := err.(int)
-			w.Write(MapToBody(Map{
-				"status": code,
-				"desc":   GetErrorMessage(code),
-			}))
+			if code, ok := err.(int); ok {
+				w.Write(MapToBody(Map{
+					"status": code,
+					"desc":   GetErrorMessage(code),
+				}))
+			} else {
+				log.Fatal(err)
+			}
 		}
 	}()
 	var user Account
