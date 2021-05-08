@@ -107,12 +107,12 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 		}
 		user.Password = password
 	}
-	if role, ok := params["role"].(int8); !ok {
+	if role, ok := params["role"].(float64); !ok {
 		HandleError(ERROR_ROLE_TYPE_WRONG, w, r)
 		_ = params["role"].(int8)
 		return
 	} else {
-		user.Role = role
+		user.Role = int8(role)
 	}
 	user.CreateTime = time.Now().Unix()
 
