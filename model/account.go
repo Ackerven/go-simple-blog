@@ -85,9 +85,23 @@ func ScryptPassword(password string) (string,error) {
 	FinalPassword := base64.StdEncoding.EncodeToString(HashPassword)
 	return FinalPassword, nil
 }
-
+//删除用户
 func DeleteUserInDb(id int) (int,error) {
 	err = db.Where("id = ?", id).Delete(&Account{}).Error
+	if err != nil {
+		return ERROR, err
+	}
+	return SUCCESS, nil
+}
+//编辑用户
+func EditUser(id int, user *Account) (int,error) {
+	var userMap = make(map[string]interface{})
+	userMap["username"] = user.Username
+	userMap["email"] = user.Email
+	userMap["nickname"] = user.Nickname
+	userMap["role"] = user.Role
+	userMap["update_time"] = user.UpdateTime
+	err = db.Model(&Account{}).Where("id = ?", id).Updates(userMap).Error
 	if err != nil {
 		return ERROR, err
 	}

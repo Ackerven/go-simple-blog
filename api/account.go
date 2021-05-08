@@ -186,9 +186,88 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // 修改用户
-func ModifyUser() {
+func ModifyUser(w http.ResponseWriter, r *http.Request) {
+	var user Account
+	var status, id int
+	params := RequestJsonInterface(r)
 
+	//类型断言
+	if username, ok := params["username"].(string); !ok {
+		HandleError(ERROR_USERNAME_TYPE_WRONG, w, r)
+		_ = params["username"].(string)
+		return
+	} else {
+		if username == "" {
+			HandleError(ERROR_USERNAME_NOT_NULL, w, r)
+			return
+		}
+		user.Username = username
+	}
+	if mail, ok := params["email"].(string); !ok {
+		HandleError(ERROR_MAIL_TYPE_WRONG, w, r)
+		_ = params["email"].(string)
+		return
+	} else {
+		if mail == "" {
+			HandleError(ERROR_MAIL_NOT_NULL, w, r)
+			return
+		}
+		user.Email = mail
+	}
+	if nickname, ok := params["nickname"].(string); !ok {
+		HandleError(ERROR_NICKNAME_TYPE_WRONG, w, r)
+		_ = params["nickname"].(string)
+		return
+	} else {
+		if nickname == "" {
+			HandleError(ERROR_NICKNAME_NOT_NULL, w, r)
+			return
+		}
+		user.Nickname = nickname
+	}
+	if role, ok := params["role"].(float64); !ok {
+		HandleError(ERROR_ROLE_TYPE_WRONG, w, r)
+		_ = params["role"].(float64)
+		return
+	} else {
+		user.Role = int8(role)
+	}
+
+	//数据库是否有记录
+	status = CheckUserName(user.Username)
+	if status != SUCCESS {
+		HandleError(status, w, r)
+		return
+	}
+	status = CheckNickName(user.Nickname)
+	if status != SUCCESS {
+		HandleError(status, w, r)
+		return
+	}
+	status = CheckEmail(user.Email)
+	if status != SUCCESS {
+		HandleError(status, w, r)
+		return
+	}
+
+	if tmp, ok := params["id"].(float64); !ok{
+		HandleError(ERROR_USERID_TYPE_WRONG, w, r)
+		_ = params["id"].(float64)
+		return
+	} else {
+		id = int(tmp)
+	}
+	status, err := EditUser(id, &user)
+	if err != nil {
+		HandleError(ERROR_DATABASE_WRITE, w, r)
+		panic(err)
+	}
+	w.Write(MapToBody(Map{
+		"status": status,
+		"desc": GetErrorMessage(status),
+	}))
 }
+
 
 // 列出用户
 func ListUser(w http.ResponseWriter, r *http.Request)  {
