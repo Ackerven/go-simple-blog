@@ -164,8 +164,25 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // 删除用户
-func DeleteUser() {
-
+func DeleteUser(w http.ResponseWriter, r *http.Request) {
+	params := RequestJsonInterface(r)
+	var id int
+	if tmp, ok := params["id"].(float64); !ok{
+		HandleError(ERROR_USERID_TYPE_WRONG, w, r)
+		_ = params["id"].(float64)
+		return
+	} else {
+		id = int(tmp)
+	}
+	status , err := DeleteUserInDb(id)
+	if err != nil {
+		HandleError(ERROR_DATABASE_DELETE, w, r)
+		panic(err)
+	}
+	w.Write(MapToBody(Map{
+		"status": status,
+		"desc": GetErrorMessage(status),
+	}))
 }
 
 // 修改用户

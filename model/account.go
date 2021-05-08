@@ -85,3 +85,11 @@ func ScryptPassword(password string) (string,error) {
 	FinalPassword := base64.StdEncoding.EncodeToString(HashPassword)
 	return FinalPassword, nil
 }
+
+func DeleteUserInDb(id int) (int,error) {
+	err = db.Where("id = ?", id).Delete(&Account{}).Error
+	if err != nil {
+		return ERROR, err
+	}
+	return SUCCESS, nil
+}
