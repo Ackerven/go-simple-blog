@@ -1,7 +1,9 @@
 package model
 
 import (
+	"encoding/base64"
 	"github.com/jinzhu/gorm"
+	"golang.org/x/crypto/scrypt"
 	. "simple-blog/utils"
 )
 
@@ -43,9 +45,15 @@ func CheckNickName(nickname string) int {
 	}
 	return SUCCESS
 }
+
 //将用户写入数据库
 func CreateUser(user *Account) (int,error) {
-	err := db.Create(&user).Error
+	var err error
+	user.Password, err = ScryptPassword(user.Password)
+	if err != nil {
+		return ERROR, err
+	}
+	err = db.Create(&user).Error
 	if err != nil {
 		return ERROR, err
 	}
@@ -60,4 +68,20 @@ func GetUserList(pageSize int, pageNum int) ([]Account, error) {
 		return nil, err
 	}
 	return userList, nil
+}
+
+// ScryptPassword 密码加密 Scrypt算法
+//scrypt https://pkg.go.dev/golang.org/x/crypto/scrypt
+func ScryptPassword(password string) (string,error) {
+	const KeyLen = 10
+	//salt 盐
+	salt := make([]byte, 8)
+	salt = []byte{'I','L','O','V','E','Y','O','U'}
+
+	HashPassword, err := scrypt.Key([]byte(password), salt, 16384, 8, 1, KeyLen)
+	if err != nil {
+		return "", err
+	}
+	FinalPassword := base64.StdEncoding.EncodeToString(HashPassword)
+	return FinalPassword, nil
 }
