@@ -1,5 +1,7 @@
 package utils
 
+import "net/http"
+
 /*
   Status:
 	1 成功
@@ -86,4 +88,11 @@ var errorStatus = map[int]string{
 
 func GetErrorMessage(status int) string {
 	return errorStatus[status]
+}
+
+func HandleError(status int, w http.ResponseWriter, r *http.Request) {
+	w.Write(MapToBody(Map{
+		"status":status,
+		"desc": GetErrorMessage(status),
+	}))
 }
