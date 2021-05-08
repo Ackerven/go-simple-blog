@@ -109,7 +109,7 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if role, ok := params["role"].(float64); !ok {
 		HandleError(ERROR_ROLE_TYPE_WRONG, w, r)
-		_ = params["role"].(int8)
+		_ = params["role"].(float64)
 		return
 	} else {
 		user.Role = int8(role)
