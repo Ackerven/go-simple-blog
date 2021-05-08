@@ -173,8 +173,8 @@ func ModifyUser() {
 
 }
 
-// 查询用户
-func GetUser(w http.ResponseWriter, r *http.Request)  {
+// 列出用户
+func ListUser(w http.ResponseWriter, r *http.Request)  {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println(err)
@@ -215,7 +215,7 @@ func GetUser(w http.ResponseWriter, r *http.Request)  {
 	}))
 }
 
-// 列出用户
-func ListUser()  {
+// 查询用户
+func GetUser()  {
 
 }

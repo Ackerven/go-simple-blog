@@ -15,6 +15,7 @@ func main() {
 
 	//路由注册
 	http.HandleFunc("/addUser", utils.HandleInterceptor(api.AddUser))
+	http.HandleFunc("/listUser", utils.HandleInterceptor(api.ListUser))
 
 	//启动服务器
 	log.Fatal(http.ListenAndServe(utils.HttpPort, nil))
