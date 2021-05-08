@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	. "simple-blog/model"
@@ -51,16 +52,20 @@ func rightRole(role int8) bool {
 	return role > 0 && role < 4
 }
 
-
-
 // 添加用户
 func AddUser(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+		}
+	}()
 	var user Account
 	var status int
 	params := RequestJsonInterface(r)
 	//类型断言
 	if username, ok := params["username"].(string); !ok {
 		HandleError(ERROR_USERNAME_TYPE_WRONG, w, r)
+		_ = params["username"].(string)
 		return
 	} else {
 		if username == "" {
@@ -71,6 +76,7 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if mail, ok := params["email"].(string); !ok {
 		HandleError(ERROR_MAIL_TYPE_WRONG, w, r)
+		_ = params["email"].(string)
 		return
 	} else {
 		if mail == "" {
@@ -81,6 +87,7 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if nickname, ok := params["nickname"].(string); !ok {
 		HandleError(ERROR_NICKNAME_TYPE_WRONG, w, r)
+		_ = params["nickname"].(string)
 		return
 	} else {
 		if nickname == "" {
@@ -91,6 +98,7 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if password, ok := params["password"].(string); !ok {
 		HandleError(ERROR_PASSWORD_TYPE_WRONG, w, r)
+		_ = params["password"].(string)
 		return
 	} else {
 		if password == "" {
@@ -99,11 +107,12 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 		}
 		user.Password = password
 	}
-	if role, ok := params["role"].(float64); !ok {
+	if role, ok := params["role"].(int8); !ok {
 		HandleError(ERROR_ROLE_TYPE_WRONG, w, r)
+		_ = params["role"].(int8)
 		return
 	} else {
-		user.Role = int8(role)
+		user.Role = role
 	}
 	user.CreateTime = time.Now().Unix()
 
