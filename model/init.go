@@ -28,11 +28,11 @@ Conn:
 		goto Conn
 	}
 
-	db.AutoMigrate(&Account{}, &Blog{})
 	db.DB().SetMaxIdleConns(30)
 	db.DB().SetMaxOpenConns(500)
 	//db.DB().SetConnMaxLifetime(time.Second * 10)
 	// 取消自动加复数
 	db.SingularTable(true)
-	db.Close()
+	db.AutoMigrate(&Account{}, &Blog{})
+	//db.Close()
 }
