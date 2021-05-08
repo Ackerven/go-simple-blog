@@ -187,6 +187,11 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 // 修改用户
 func ModifyUser(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+		}
+	}()
 	var user Account
 	var status, id int
 	params := RequestJsonInterface(r)

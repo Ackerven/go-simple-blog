@@ -17,6 +17,7 @@ func main() {
 	http.HandleFunc("/addUser", utils.HandleInterceptor(api.AddUser))
 	http.HandleFunc("/listUser", utils.HandleInterceptor(api.ListUser))
 	http.HandleFunc("/deleteUser", utils.HandleInterceptor(api.DeleteUser))
+	http.HandleFunc("/modifyUser", utils.HandleInterceptor(api.ModifyUser))
 
 	//启动服务器
 	log.Fatal(http.ListenAndServe(utils.HttpPort, nil))
