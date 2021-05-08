@@ -4,7 +4,7 @@ import "net/http"
 
 //解决跨域
 
-func handleInterceptor(h http.HandlerFunc) http.HandlerFunc {
+func HandleInterceptor(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// 允许访问资源服务
 		w.Header().Set("Access-Control-Allow-Origin", "*")

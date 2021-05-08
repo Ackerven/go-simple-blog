@@ -1,5 +1,7 @@
 package model
 
+import . "simple-blog/utils"
+
 // 账户表
 type Account struct {
 	ID         int    `gorm:"primary_key" json:"id"`    // 主键
@@ -10,4 +12,39 @@ type Account struct {
 	Password   string // 密码
 	CreateTime int64  `json:"create_time"` // 创建时间
 	UpdateTime int64  `json:"update_time"` // 更新时间
+}
+//用户名是否存在
+func CheckUserName(username string) int {
+	var user Account
+	db.Select("id").Where("username = ?", username).First(&user)
+	if user.ID > 0 {
+		return ERROR_USERNAME_EXIST
+	}
+	return SUCCESS
+}
+//邮箱是否存在
+func CheckEmail(mail string) int {
+	var user Account
+	db.Select("id").Where("email = ?", mail).First(&user)
+	if user.ID > 0 {
+		return ERROR_MAIL_EXIST
+	}
+	return SUCCESS
+}
+//昵称是否存在
+func CheckNickName(nickname string) int {
+	var user Account
+	db.Select("id").Where("nickname = ?", nickname).First(&user)
+	if user.ID > 0 {
+		return ERROR_NICKNAME_EXIST
+	}
+	return SUCCESS
+}
+//将用户写入数据库
+func CreateUser(user *Account) (int,error) {
+	err := db.Create(&user).Error
+	if err != nil {
+		return ERROR, err
+	}
+	return SUCCESS, nil
 }
