@@ -1,6 +1,9 @@
 package model
 
-import . "simple-blog/utils"
+import (
+	"github.com/jinzhu/gorm"
+	. "simple-blog/utils"
+)
 
 // 账户表
 type Account struct {
@@ -47,4 +50,14 @@ func CreateUser(user *Account) (int,error) {
 		return ERROR, err
 	}
 	return SUCCESS, nil
+}
+
+//查询用户列表
+func GetUserList(pageSize int, pageNum int) ([]Account, error) {
+	var userList []Account
+	err = db.Limit(pageSize).Offset((pageNum - 1) * pageSize).Find(&userList).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+	return userList, nil
 }

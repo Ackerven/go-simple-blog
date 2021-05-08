@@ -174,8 +174,45 @@ func ModifyUser() {
 }
 
 // 查询用户
-func GetUser()  {
+func GetUser(w http.ResponseWriter, r *http.Request)  {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+		}
+	}()
+	params := RequestJsonInterface(r)
+	var pageSize, pageNum int
+	if tmp, ok := params["pagesize"].(float64); !ok {
+		HandleError(ERROR_PAGESIZE_TYPE_WRONG, w, r)
+		_ = params["pagesize"].(float64)
+		return
+	} else {
+		pageSize = int(tmp)
+	}
+	if tmp, ok := params["pagenum"].(float64); !ok {
+		HandleError(ERROR_PAGENUM_TYPE_WRONG, w, r)
+		_ = params["pagenum"].(float64)
+		return
+	} else {
+		pageNum = int(tmp)
+	}
 
+	if pageSize == 0 {
+		pageSize = -1
+	}
+	if pageNum == 0 {
+		pageNum = -1
+	}
+	userList, err := GetUserList(pageSize, pageNum)
+	if err != nil {
+		HandleError(ERROR_DATABASE_SEARCH, w, r)
+		panic(err)
+	}
+	w.Write(MapToBody(Map{
+		"status":SUCCESS,
+		"desc": GetErrorMessage(SUCCESS),
+		"result":userList,
+	}))
 }
 
 // 列出用户
