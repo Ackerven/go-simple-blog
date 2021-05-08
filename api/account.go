@@ -55,56 +55,53 @@ func rightRole(role int8) bool {
 
 // 添加用户
 func AddUser(w http.ResponseWriter, r *http.Request) {
-	defer func() {
-		if err := recover(); err != nil {
-			if code, ok := err.(int); ok {
-				w.Write(MapToBody(Map{
-					"status": code,
-					"desc":   GetErrorMessage(code),
-				}))
-			} else {
-				log.Fatal(err)
-			}
-		}
-	}()
 	var user Account
 	var status int
 	params := RequestJsonInterface(r)
 	//类型断言
 	if username, ok := params["username"].(string); !ok {
-		panic(ERROR_USERNAME_TYPE_WRONG)
+		HandleError(ERROR_USERNAME_TYPE_WRONG, w, r)
+		return
 	} else {
 		if username == "" {
-			panic(ERROR_USERNAME_NOT_NULL)
+			HandleError(ERROR_USERNAME_NOT_NULL, w, r)
+			return
 		}
 		user.Username = username
 	}
 	if mail, ok := params["email"].(string); !ok {
-		panic(ERROR_MAIL_TYPE_WRONG)
+		HandleError(ERROR_MAIL_TYPE_WRONG, w, r)
+		return
 	} else {
 		if mail == "" {
-			panic(ERROR_MAIL_NOT_NULL)
+			HandleError(ERROR_MAIL_NOT_NULL, w, r)
+			return
 		}
 		user.Email = mail
 	}
 	if nickname, ok := params["nickname"].(string); !ok {
-		panic(ERROR_NICKNAME_TYPE_WRONG)
+		HandleError(ERROR_NICKNAME_TYPE_WRONG, w, r)
+		return
 	} else {
 		if nickname == "" {
-			panic(ERROR_NICKNAME_NOT_NULL)
+			HandleError(ERROR_NICKNAME_NOT_NULL, w, r)
+			return
 		}
 		user.Nickname = nickname
 	}
 	if password, ok := params["password"].(string); !ok {
-		panic(ERROR_PASSWORD_TYPE_WRONG)
+		HandleError(ERROR_PASSWORD_TYPE_WRONG, w, r)
+		return
 	} else {
 		if password == "" {
-			panic(ERROR_PASSWORD_NOT_NULL)
+			HandleError(ERROR_PASSWORD_NOT_NULL, w, r)
+			return
 		}
 		user.Password = password
 	}
 	if role, ok := params["role"].(float64); !ok {
-		panic(ERROR_ROLE_TYPE_WRONG)
+		HandleError(ERROR_ROLE_TYPE_WRONG, w, r)
+		return
 	} else {
 		user.Role = int8(role)
 	}
@@ -112,36 +109,43 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 
 	//检查字段
 	if !rightName(user.Username) {
-		panic(ERROR_USERNAME_TYPE_WRONG)
+		HandleError(ERROR_USERNAME_TYPE_WRONG, w, r)
+		return
 	}
 	if !rightName(user.Nickname) {
-		panic(ERROR_NICKNAME_TYPE_WRONG)
+		HandleError(ERROR_NICKNAME_TYPE_WRONG, w, r)
+		return
 	}
 	if !rightPassword(user.Password) {
-		panic(ERROR_PASSWORD_TYPE_WRONG)
+		HandleError(ERROR_PASSWORD_TYPE_WRONG, w, r)
+		return
 	}
 	if !rightRole(user.Role) {
-		panic(ERROR_ROLE_TYPE_WRONG)
+		HandleError(ERROR_ROLE_TYPE_WRONG, w, r)
+		return
 	}
 
 	//数据库是否有记录
 	status = CheckUserName(user.Username)
 	if status != SUCCESS {
-		panic(status)
+		HandleError(status, w, r)
+		return
 	}
 	status = CheckNickName(user.Nickname)
 	if status != SUCCESS {
-		panic(status)
+		HandleError(status, w, r)
+		return
 	}
 	status = CheckEmail(user.Email)
 	if status != SUCCESS {
-		panic(status)
+		HandleError(status, w, r)
+		return
 	}
 
 	status, err := CreateUser(&user)
 	if err != nil {
+		HandleError(status, w, r)
 		log.Fatal(err)
-		panic(status)
 	}
 	w.Write(MapToBody(Map{
 		"status" : status,
