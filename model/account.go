@@ -45,6 +45,16 @@ func CheckNickName(nickname string) int {
 	}
 	return SUCCESS
 }
+//ID是否存在
+func CheckUserID(id int) int  {
+	var user Account
+	err := db.Where("id = ?", id).First(&user).Error
+	if err == gorm.ErrRecordNotFound {
+		return ERROR_USERID_NOT_EXIET
+	}
+	return SUCCESS
+}
+
 
 //将用户写入数据库
 func CreateUser(user *Account) (int,error) {
@@ -106,4 +116,10 @@ func EditUser(id int, user *Account) (int,error) {
 		return ERROR, err
 	}
 	return SUCCESS, nil
+}
+//获取单个用户的信息
+func GetUserInDb(id int) (Account,error){
+	var user Account
+	err = db.Where("id = ?", id).First(&user).Error
+	return user, err
 }

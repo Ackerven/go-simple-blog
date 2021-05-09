@@ -326,6 +326,43 @@ func ListUser(w http.ResponseWriter, r *http.Request)  {
 }
 
 // 查询用户
-func GetUser()  {
+func GetUser(w http.ResponseWriter, r *http.Request)  {
+	defer func() {
+		err := recover()
+		if err == nil {
+			return
+		}
+		switch result := err.(type) {
+		case int :
+			//status := err.(int)
+			w.Write(MapToBody(Map{
+				"status":result,
+				"desc": GetErrorMessage(result),
+			}))
+		default:
+			fmt.Printf("系统错误：%v", result)
+		}
+	}()
+	params := RequestJsonInterface(r)
+	var id, status int
+	if tmp, ok := params["id"].(float64); !ok{
+		panic(ERROR_USERID_TYPE_WRONG)
+	} else {
+		id = int(tmp)
+	}
 
+	if status = CheckUserID(id); status != SUCCESS {
+		panic(status)
+	}
+
+	user, err := GetUserInDb(id)
+	if err != nil {
+		fmt.Sprintf("系统错误：%v",err)
+		panic(ERROR)
+	}
+	w.Write(MapToBody(Map{
+		"status":status,
+		"desc": GetErrorMessage(status),
+		"user":user,
+	}))
 }
