@@ -19,6 +19,7 @@ func main() {
 	http.HandleFunc("/deleteUser", utils.HandleInterceptor(api.DeleteUser))
 	http.HandleFunc("/modifyUser", utils.HandleInterceptor(api.ModifyUser))
 
+
 	//启动服务器
 	log.Fatal(http.ListenAndServe(utils.HttpPort, nil))
 }
