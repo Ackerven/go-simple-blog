@@ -146,3 +146,16 @@ func EditPassword(id int, oldPassword, newPassword string) (int,error)  {
 	}
 	return SUCCESS, nil
 }
+
+//登陆验证
+func CheckLogin(username, passowrd string) int {
+	var user Account
+	db.Where("username = ?", username).First(&user)
+	if user.ID == 0 {
+		return ERROR_USERID_NOT_EXIET
+	}
+	if key, _ := ScryptPassword(passowrd); key != user.Password {
+		return ERROR_PASSWORD_WRONG
+	}
+	return SUCCESS
+}

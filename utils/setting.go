@@ -7,6 +7,7 @@ import (
 
 var (
 	HttpPort	string
+	JwtKey		string
 
 	Db			string
 	DbHost		string
@@ -34,6 +35,7 @@ func init() {
 
 func LoadServer(file *ini.File) {
 	HttpPort = file.Section("server").Key("HttpPort").MustString(":2333")
+	JwtKey = file.Section("server").Key("JwtKey").MustString("ILOVEYOU")
 }
 
 func LoadDateBase(file *ini.File) {
