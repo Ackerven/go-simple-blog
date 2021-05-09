@@ -19,6 +19,7 @@ func main() {
 	http.HandleFunc("/deleteUser", utils.HandleInterceptor(api.DeleteUser))
 	http.HandleFunc("/modifyUser", utils.HandleInterceptor(api.ModifyUser))
 	http.HandleFunc("/getUser", utils.HandleInterceptor(api.GetUser))
+	http.HandleFunc("/join", utils.HandleInterceptor(api.Join))
 
 
 	//启动服务器
