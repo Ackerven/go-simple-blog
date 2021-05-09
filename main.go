@@ -18,6 +18,7 @@ func main() {
 	http.HandleFunc("/listUser", utils.HandleInterceptor(api.ListUser))
 	http.HandleFunc("/deleteUser", utils.HandleInterceptor(api.DeleteUser))
 	http.HandleFunc("/modifyUser", utils.HandleInterceptor(api.ModifyUser))
+	http.HandleFunc("/getUser", utils.HandleInterceptor(api.GetUser))
 
 
 	//启动服务器

@@ -240,6 +240,7 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 	} else {
 		user.Role = int8(role)
 	}
+	user.UpdateTime = time.Now().Unix()
 
 	//数据库是否有记录
 	status = CheckUserName(user.Username)
