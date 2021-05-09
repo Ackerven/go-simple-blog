@@ -123,3 +123,24 @@ func GetUserInDb(id int) (Account,error){
 	err = db.Where("id = ?", id).First(&user).Error
 	return user, err
 }
+//修改密码
+func EditPassword(id int, oldPassword, newPassword string) (int,error)  {
+	user, err := GetUserInDb(id)
+	if err != nil {
+		return SUCCESS, err
+	}
+	if tmp, _ := ScryptPassword(oldPassword); tmp != user.Password {
+		return ERROR_PASSWORD_WRONG, nil
+	}
+	var userMap = make(map[string]interface{})
+	tmp, err := ScryptPassword(newPassword)
+	if err != nil {
+		return ERROR, err
+	}
+	userMap["password"] = tmp
+	err = db.Model(&Account{}).Where("id = ?", id).Updates(userMap).Error
+	if err != nil {
+		return ERROR, err
+	}
+	return SUCCESS, nil
+}

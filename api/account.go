@@ -463,3 +463,62 @@ func Join(w http.ResponseWriter, r *http.Request) {
 		"id": user.ID,
 	}))
 }
+
+//修改密码
+func ModifyPassword(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			return
+		}
+		switch result := err.(type) {
+		case int :
+			//status := err.(int)
+			w.Write(MapToBody(Map{
+				"status":result,
+				"desc": GetErrorMessage(result),
+			}))
+		default:
+			fmt.Printf("系统错误：%v", result)
+		}
+	}()
+	var status, id int
+	var oldPassword, newPassword string
+	params := RequestJsonInterface(r)
+
+	if tmp, ok := params["id"].(float64); !ok{
+		panic(ERROR_USERID_TYPE_WRONG)
+		return
+	} else {
+		id = int(tmp)
+	}
+	if tmp, ok := params["oldPassword"].(string); !ok {
+		panic(ERROR_PASSWORD_WRONG)
+	} else {
+		if tmp == "" {
+			panic(ERROR_PASSWORD_WRONG)
+		}
+		oldPassword = tmp
+	}
+	if tmp, ok := params["newPassword"].(string); !ok {
+		panic(ERROR_PASSWORD_TYPE_WRONG)
+	} else {
+		if tmp == "" {
+			panic(ERROR_PASSWORD_TYPE_WRONG)
+		}
+		if !rightPassword(tmp) {
+			panic(ERROR_PASSWORD_TYPE_WRONG)
+		}
+		newPassword = tmp
+	}
+
+	status, err := EditPassword(id, oldPassword, newPassword)
+	if err != nil {
+		fmt.Sprintf("系统错误：%v",err)
+		panic(status)
+	}
+	w.Write(MapToBody(Map{
+		"status" : status,
+		"desc" : GetErrorMessage(status),
+	}))
+}
