@@ -276,7 +276,6 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 	}))
 }
 
-
 // 列出用户
 func ListUser(w http.ResponseWriter, r *http.Request)  {
 	defer func() {
@@ -365,5 +364,102 @@ func GetUser(w http.ResponseWriter, r *http.Request)  {
 		"status":status,
 		"desc": GetErrorMessage(status),
 		"user":user,
+	}))
+}
+
+//用户注册
+func Join(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			return
+		}
+		switch result := err.(type) {
+		case int :
+			//status := err.(int)
+			w.Write(MapToBody(Map{
+				"status":result,
+				"desc": GetErrorMessage(result),
+			}))
+		default:
+			fmt.Printf("系统错误：%v", result)
+		}
+	}()
+	var user Account
+	var status int
+	params := RequestJsonInterface(r)
+	//类型断言
+	if username, ok := params["username"].(string); !ok {
+		panic(ERROR_USERNAME_TYPE_WRONG)
+	} else {
+		if username == "" {
+			panic(ERROR_USERNAME_NOT_NULL)
+		}
+		user.Username = username
+	}
+	if mail, ok := params["email"].(string); !ok {
+		panic(ERROR_MAIL_TYPE_WRONG)
+	} else {
+		if mail == "" {
+			panic(ERROR_MAIL_NOT_NULL)
+		}
+		user.Email = mail
+	}
+	if nickname, ok := params["nickname"].(string); !ok {
+		panic(ERROR_NICKNAME_TYPE_WRONG)
+	} else {
+		if nickname == "" {
+			panic(ERROR_NICKNAME_NOT_NULL)
+		}
+		user.Nickname = nickname
+	}
+	if password, ok := params["password"].(string); !ok {
+		panic(ERROR_PASSWORD_TYPE_WRONG)
+	} else {
+		if password == "" {
+			panic(ERROR_PASSWORD_NOT_NULL)
+		}
+		user.Password = password
+	}
+	user.Role = 1
+	user.CreateTime = time.Now().Unix()
+
+	//检查字段
+	if !rightName(user.Username) {
+		panic(ERROR_USERNAME_TYPE_WRONG)
+	}
+	if !rightName(user.Nickname) {
+		panic(ERROR_NICKNAME_TYPE_WRONG)
+	}
+	if !rightPassword(user.Password) {
+		panic(ERROR_PASSWORD_TYPE_WRONG)
+	}
+	if !rightRole(user.Role) {
+		panic(ERROR_ROLE_TYPE_WRONG)
+	}
+
+	//数据库是否有记录
+	status = CheckUserName(user.Username)
+	if status != SUCCESS {
+		panic(status)
+	}
+	status = CheckNickName(user.Nickname)
+	if status != SUCCESS {
+		panic(status)
+	}
+	status = CheckEmail(user.Email)
+	if status != SUCCESS {
+		panic(status)
+	}
+
+	status, err := CreateUser(&user)
+	if err != nil {
+		fmt.Sprintf("系统错误：%v",err)
+		panic(status)
+	}
+	w.Write(MapToBody(Map{
+		"status" : status,
+		"desc" : GetErrorMessage(status),
+		"id": user.ID,
 	}))
 }
