@@ -492,7 +492,7 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 	} else {
 		id = int(tmp)
 	}
-	if tmp, ok := params["oldPassword"].(string); !ok {
+	if tmp, ok := params["oldpassword"].(string); !ok {
 		panic(ERROR_PASSWORD_WRONG)
 	} else {
 		if tmp == "" {
@@ -500,7 +500,7 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 		}
 		oldPassword = tmp
 	}
-	if tmp, ok := params["newPassword"].(string); !ok {
+	if tmp, ok := params["newpassword"].(string); !ok {
 		panic(ERROR_PASSWORD_TYPE_WRONG)
 	} else {
 		if tmp == "" {

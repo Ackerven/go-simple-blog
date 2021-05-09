@@ -5,6 +5,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/scrypt"
 	. "simple-blog/utils"
+	"time"
 )
 
 // 账户表
@@ -138,6 +139,7 @@ func EditPassword(id int, oldPassword, newPassword string) (int,error)  {
 		return ERROR, err
 	}
 	userMap["password"] = tmp
+	userMap["update_time"] = time.Now().Unix()
 	err = db.Model(&Account{}).Where("id = ?", id).Updates(userMap).Error
 	if err != nil {
 		return ERROR, err

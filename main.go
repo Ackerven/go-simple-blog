@@ -20,6 +20,7 @@ func main() {
 	http.HandleFunc("/modifyUser", utils.HandleInterceptor(api.ModifyUser))
 	http.HandleFunc("/getUser", utils.HandleInterceptor(api.GetUser))
 	http.HandleFunc("/join", utils.HandleInterceptor(api.Join))
+	http.HandleFunc("/modifyPassword", utils.HandleInterceptor(api.ModifyPassword))
 
 
 	//启动服务器
