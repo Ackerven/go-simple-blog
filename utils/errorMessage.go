@@ -12,6 +12,7 @@ import "net/http"
 const (
 	SUCCESS = 1
 	ERROR 	= 0
+	NOPOWER = 2
 
 	//文章
 
@@ -61,6 +62,7 @@ const (
 var errorStatus = map[int]string{
 	SUCCESS : "OK",
 	ERROR : "FAILED",
+	NOPOWER: "没有权限",
 
 	ERROR_AUTHOR_ID_NOT_EXIXT : "作者ID不存在",
 	ERROR_AUTHOR_ID_NOT_NULL : "作者ID不能为空",

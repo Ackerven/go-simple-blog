@@ -111,7 +111,7 @@ func JwtToken(h http.HandlerFunc) http.HandlerFunc {
 					"desc": utils.GetErrorMessage(result),
 				}))
 			default:
-				fmt.Printf("系统错误：%v", result)
+				fmt.Printf("系统错误：%v\n", result)
 			}
 		}()
 		tokenHerder := r.Header.Get("Authorization")
