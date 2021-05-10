@@ -66,9 +66,21 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v", result)
+			fmt.Printf("系统错误：%v\n", result)
 		}
 	}()
+	loginUsername := r.Header.Get("username")
+	role, err:= GetRole(loginUsername)
+	if err != nil {
+		fmt.Printf("系统错误：%v\n",err)
+		panic(ERROR)
+	}
+	if role == -1 {
+		panic(ERROR_USERNAME_NOT_EXIST)
+	}
+	if role != RoleSuperAdmin {
+		panic(NOPOWER)
+	}
 	var user Account
 	var status int
 	params := RequestJsonInterface(r)
@@ -140,9 +152,9 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 		panic(status)
 	}
 
-	status, err := CreateUser(&user)
+	status, err = CreateUser(&user)
 	if err != nil {
-		fmt.Sprintf("系统错误：%v",err)
+		fmt.Printf("系统错误：%v\n",err)
 		panic(status)
 	}
 	w.Write(MapToBody(Map{
@@ -167,9 +179,21 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v", result)
+			fmt.Printf("系统错误：%v\n", result)
 		}
 	}()
+	loginUsername := r.Header.Get("username")
+	role, err:= GetRole(loginUsername)
+	if err != nil {
+		fmt.Printf("系统错误：%v\n",err)
+		panic(ERROR)
+	}
+	if role == -1 {
+		panic(ERROR_USERNAME_NOT_EXIST)
+	}
+	if role != RoleSuperAdmin {
+		panic(NOPOWER)
+	}
 	params := RequestJsonInterface(r)
 	var id int
 	if tmp, ok := params["id"].(float64); !ok{
@@ -179,7 +203,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	status , err := DeleteUserInDb(id)
 	if err != nil {
-		fmt.Printf("系统错误：%v", err)
+		fmt.Printf("系统错误：%v\n", err)
 		panic(ERROR_DATABASE_DELETE)
 	}
 	w.Write(MapToBody(Map{
@@ -203,9 +227,21 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v", result)
+			fmt.Printf("系统错误：%v\n", result)
 		}
 	}()
+	loginUsername := r.Header.Get("username")
+	role, err:= GetRole(loginUsername)
+	if err != nil {
+		fmt.Printf("系统错误：%v\n",err)
+		panic(ERROR)
+	}
+	if role == -1 {
+		panic(ERROR_USERNAME_NOT_EXIST)
+	}
+	if role != RoleSuperAdmin {
+		panic(NOPOWER)
+	}
 	var user Account
 	var status, id int
 	params := RequestJsonInterface(r)
@@ -265,9 +301,9 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 	} else {
 		id = int(tmp)
 	}
-	status, err := EditUser(id, &user)
+	status, err = EditUser(id, &user)
 	if err != nil {
-		fmt.Printf("系统错误：%v", err)
+		fmt.Printf("系统错误：%v\n", err)
 		panic(ERROR_DATABASE_WRITE)
 	}
 	w.Write(MapToBody(Map{
@@ -291,9 +327,23 @@ func ListUser(w http.ResponseWriter, r *http.Request)  {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v", result)
+			fmt.Printf("系统错误：%v\n", result)
 		}
 	}()
+	loginUsername := r.Header.Get("username")
+	//fmt.Println(loginUsername)
+	role, err:= GetRole(loginUsername)
+	//fmt.Println(role)
+	if err != nil {
+		fmt.Printf("系统错误：%v\n",err)
+		panic(ERROR)
+	}
+	if role == -1 {
+		panic(ERROR_USERNAME_NOT_EXIST)
+	}
+	if role != RoleSuperAdmin {
+		panic(NOPOWER)
+	}
 	params := RequestJsonInterface(r)
 	var pageSize, pageNum int
 	if tmp, ok := params["pagesize"].(float64); !ok {
@@ -315,7 +365,7 @@ func ListUser(w http.ResponseWriter, r *http.Request)  {
 	}
 	userList, err := GetUserList(pageSize, pageNum)
 	if err != nil {
-		fmt.Printf("系统错误：%v", err)
+		fmt.Printf("系统错误：%v\n", err)
 		panic(ERROR_DATABASE_SEARCH)
 	}
 	w.Write(MapToBody(Map{
@@ -340,9 +390,21 @@ func GetUser(w http.ResponseWriter, r *http.Request)  {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v", result)
+			fmt.Printf("系统错误：%v\n", result)
 		}
 	}()
+	loginUsername := r.Header.Get("username")
+	role, err:= GetRole(loginUsername)
+	if err != nil {
+		fmt.Printf("系统错误：%v\n",err)
+		panic(ERROR)
+	}
+	if role == -1 {
+		panic(ERROR_USERNAME_NOT_EXIST)
+	}
+	if role != RoleSuperAdmin {
+		panic(NOPOWER)
+	}
 	params := RequestJsonInterface(r)
 	var id, status int
 	if tmp, ok := params["id"].(float64); !ok{
@@ -357,7 +419,7 @@ func GetUser(w http.ResponseWriter, r *http.Request)  {
 
 	user, err := GetUserInDb(id)
 	if err != nil {
-		fmt.Sprintf("系统错误：%v",err)
+		fmt.Printf("系统错误：%v\n",err)
 		panic(ERROR)
 	}
 	w.Write(MapToBody(Map{
@@ -382,7 +444,7 @@ func Join(w http.ResponseWriter, r *http.Request) {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v", result)
+			fmt.Printf("系统错误：%v\n", result)
 		}
 	}()
 	var user Account
@@ -454,7 +516,7 @@ func Join(w http.ResponseWriter, r *http.Request) {
 
 	status, err := CreateUser(&user)
 	if err != nil {
-		fmt.Sprintf("系统错误：%v",err)
+		fmt.Printf("系统错误：%v\n",err)
 		panic(status)
 	}
 	w.Write(MapToBody(Map{
@@ -479,7 +541,7 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v", result)
+			fmt.Printf("系统错误：%v\n", result)
 		}
 	}()
 	var status, id int
@@ -491,6 +553,10 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		id = int(tmp)
+	}
+	status = CheckUserID(id)
+	if status != SUCCESS {
+		panic(ERROR_USERNAME_NOT_EXIST)
 	}
 	if tmp, ok := params["oldpassword"].(string); !ok {
 		panic(ERROR_PASSWORD_WRONG)
@@ -514,7 +580,7 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 
 	status, err := EditPassword(id, oldPassword, newPassword)
 	if err != nil {
-		fmt.Sprintf("系统错误：%v",err)
+		fmt.Printf("系统错误：%v\n",err)
 		panic(status)
 	}
 	w.Write(MapToBody(Map{

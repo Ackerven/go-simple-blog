@@ -152,10 +152,22 @@ func CheckLogin(username, passowrd string) int {
 	var user Account
 	db.Where("username = ?", username).First(&user)
 	if user.ID == 0 {
-		return ERROR_USERID_NOT_EXIET
+		return ERROR_USERNAME_NOT_EXIST
 	}
 	if key, _ := ScryptPassword(passowrd); key != user.Password {
 		return ERROR_PASSWORD_WRONG
 	}
 	return SUCCESS
+}
+// Role ?
+func GetRole(username string) (int ,error){
+	var user Account
+	err = db.Where("username = ?", username).First(&user).Error
+	if err != nil {
+		return 0, err
+	}
+	if err == gorm.ErrRecordNotFound {
+		return -1, nil
+	}
+	return int(user.Role), nil
 }
