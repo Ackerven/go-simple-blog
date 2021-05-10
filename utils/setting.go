@@ -42,9 +42,9 @@ func LoadDateBase(file *ini.File) {
 	Db = file.Section("database").Key("Db").MustString("mysql")
 	DbHost = file.Section("database").Key("DbHost").MustString("gz-cdb-8eb5lnxf.sql.tencentcdb.com")
 	DbPort = file.Section("database").Key("DbPort").MustString("58893")
-	DbUser = file.Section("database").Key("DbUser").MustString("smsklxq1")
-	DbPassWord = file.Section("database").Key("DbPassWord").MustString("smsklxq1")
-	DbName = file.Section("database").Key("DbName").MustString("smsklxq1")
+	DbUser = file.Section("database").Key("DbUser").MustString("smsklxq2")
+	DbPassWord = file.Section("database").Key("DbPassWord").MustString("smsklxq2")
+	DbName = file.Section("database").Key("DbName").MustString("smsklxq2")
 }
 
 func LoadUser(file *ini.File) {
