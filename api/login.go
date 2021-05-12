@@ -2,15 +2,15 @@ package api
 
 import (
 	"net/http"
-	"simple-blog/middleware"
 	. "simple-blog/model"
 	. "simple-blog/utils"
+	"time"
 )
 
 func Login(w http.ResponseWriter, r *http.Request) {
 	var user Account
 	params := RequestJsonInterface(r)
-	//类型断言
+	//断言
 	if username, ok := params["username"].(string); !ok {
 		panic(ERROR_USERNAME_TYPE_WRONG)
 	} else {
@@ -29,13 +29,15 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := CheckLogin(user.Username, user.Password)
-	var token string
-	if status == SUCCESS {
-		token, _ = middleware.SetToken(user.Username)
+	cookie := http.Cookie{
+		Name: "login",
+		Value: user.Username,
+		Path: "/",
+		Expires: time.Now().Add(24*time.Hour),
 	}
+	http.SetCookie(w, &cookie)
 	w.Write(MapToBody(Map{
 		"status":status,
-		"desc": GetErrorMessage(status),
-		"token":token,
+		"desc":GetErrorMessage(status),
 	}))
 }
