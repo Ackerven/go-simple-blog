@@ -5,6 +5,7 @@ import (
 	"net/http"
 	. "simple-blog/model"
 	. "simple-blog/utils"
+	"strconv"
 	"time"
 )
 
@@ -53,8 +54,8 @@ func rightRole(role int8) bool {
 //角色检查
 func CheckRole(userRole int, r *http.Request) {
 	cookie, _ := r.Cookie("login")
-	loginUsername := cookie.Value
-	role, err:= GetRole(loginUsername)
+	id, _:= strconv.Atoi(cookie.Value)
+	role, err:= GetRole(id)
 	if err != nil {
 		fmt.Printf("System Error: %v\n",err)
 		panic(ERROR)

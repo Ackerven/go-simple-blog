@@ -153,12 +153,14 @@ func EditPassword(id int, oldPassword, newPassword string) (int,error)  {
 }
 
 //登陆验证
-func CheckLogin(username, password string) int {
+func CheckLogin(username, password string, id *int) int {
 	var user Account
 	db.Where("username = ?", username).First(&user)
 	if user.ID == 0 {
 		return ERROR_USERNAME_NOT_EXIST
 	}
+	*id = user.ID
+	//fmt.Println(user.ID)
 	if key, _ := ScryptPassword(password); key != user.Password {
 		return ERROR_PASSWORD_WRONG
 	}
@@ -166,9 +168,9 @@ func CheckLogin(username, password string) int {
 }
 
 // Role ?
-func GetRole(username string) (int ,error){
+func GetRole(id int) (int ,error){
 	var user Account
-	err = db.Where("username = ?", username).First(&user).Error
+	err = db.Where("id = ?", id).First(&user).Error
 	if err != nil {
 		return 0, err
 	}

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	. "simple-blog/model"
 	. "simple-blog/utils"
+	"strconv"
 	"time"
 )
 
@@ -27,11 +28,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		}
 		user.Password = password
 	}
-
-	status := CheckLogin(user.Username, user.Password)
+	var id int
+	status := CheckLogin(user.Username, user.Password, &id)
+	value := strconv.Itoa(id)
+	//fmt.Println(id)
 	cookie := http.Cookie{
 		Name: "login",
-		Value: user.Username,
+		Value: value,
 		Path: "/",
 		Expires: time.Now().Add(24*time.Hour),
 	}
