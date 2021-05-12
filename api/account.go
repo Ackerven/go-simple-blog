@@ -20,10 +20,10 @@ func rightName(username string) bool  {
 	return true
 }
 //检查密码是否合法
-//合法的密码：
-//1. 至少8位字符
-//2. 必须包含字母数字
 func rightPassword(password string) bool {
+	//合法的密码：
+	//1. 至少8位字符
+	//2. 必须包含字母数字
 	if len(password) < 8 {
 		return false
 	}
@@ -48,41 +48,25 @@ func rightPassword(password string) bool {
 }
 //用户类型检查
 func rightRole(role int8) bool {
-	return role > 0 && role < 4
+	return role >= int8(RoleUser) && role <= int8(RoleSuperAdmin)
 }
-
-// 添加用户
-func AddUser(w http.ResponseWriter, r *http.Request) {
-	defer func() {
-		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("系统错误：%v\n", result)
-		}
-	}()
+//角色检查
+func CheckRole(userRole int, r *http.Request) {
 	loginUsername := r.Header.Get("username")
 	role, err:= GetRole(loginUsername)
 	if err != nil {
-		fmt.Printf("系统错误：%v\n",err)
+		fmt.Printf("System Error: %v\n",err)
 		panic(ERROR)
 	}
 	if role == -1 {
 		panic(ERROR_USERNAME_NOT_EXIST)
 	}
-	if role != RoleSuperAdmin {
+	if role != userRole {
 		panic(NOPOWER)
 	}
-	var user Account
-	var status int
+}
+//字段获取并检查
+func filed(r *http.Request, checkType string, user *Account)  {
 	params := RequestJsonInterface(r)
 	//类型断言
 	if username, ok := params["username"].(string); !ok {
@@ -109,20 +93,42 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 		}
 		user.Nickname = nickname
 	}
-	if password, ok := params["password"].(string); !ok {
-		panic(ERROR_PASSWORD_TYPE_WRONG)
-	} else {
-		if password == "" {
-			panic(ERROR_PASSWORD_NOT_NULL)
+
+	//除了join，都需要role字段
+	if checkType == "adduser" || checkType == "modifyuser" {
+		if role, ok := params["role"].(float64); !ok {
+			panic(ERROR_ROLE_TYPE_WRONG)
+		} else {
+			user.Role = int8(role)
 		}
-		user.Password = password
+		if !rightRole(user.Role) {
+			panic(ERROR_ROLE_TYPE_WRONG)
+		}
 	}
-	if role, ok := params["role"].(float64); !ok {
-		panic(ERROR_ROLE_TYPE_WRONG)
-	} else {
-		user.Role = int8(role)
+	//除了modifyuser，都需要password字段及创建时间
+	if checkType == "adduser" || checkType == "join" {
+		if password, ok := params["password"].(string); !ok {
+			panic(ERROR_PASSWORD_TYPE_WRONG)
+		} else {
+			if password == "" {
+				panic(ERROR_PASSWORD_NOT_NULL)
+			}
+			user.Password = password
+		}
+		if !rightPassword(user.Password) {
+			panic(ERROR_PASSWORD_TYPE_WRONG)
+		}
+		user.CreateTime = time.Now().Unix()
 	}
-	user.CreateTime = time.Now().Unix()
+	//只有modifyuser需要id及更新时间
+	if checkType == "modifyuser" {
+		if id, ok := params["id"].(float64); !ok{
+			panic(ERROR_USERID_TYPE_WRONG)
+		} else {
+			user.ID = int(id)
+		}
+		user.UpdateTime = time.Now().Unix()
+	}
 
 	//检查字段
 	if !rightName(user.Username) {
@@ -131,15 +137,9 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 	if !rightName(user.Nickname) {
 		panic(ERROR_NICKNAME_TYPE_WRONG)
 	}
-	if !rightPassword(user.Password) {
-		panic(ERROR_PASSWORD_TYPE_WRONG)
-	}
-	if !rightRole(user.Role) {
-		panic(ERROR_ROLE_TYPE_WRONG)
-	}
 
 	//数据库是否有记录
-	status = CheckUserName(user.Username)
+	status := CheckUserName(user.Username)
 	if status != SUCCESS {
 		panic(status)
 	}
@@ -151,10 +151,33 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 	if status != SUCCESS {
 		panic(status)
 	}
+}
 
-	status, err = CreateUser(&user)
+// 添加用户
+func AddUser(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			return
+		}
+		switch result := err.(type) {
+		case int :
+			//status := err.(int)
+			w.Write(MapToBody(Map{
+				"status":result,
+				"desc": GetErrorMessage(result),
+			}))
+		default:
+			fmt.Printf("System Error: %v\n", result)
+		}
+	}()
+	CheckRole(RoleSuperAdmin, r)
+	var user Account
+	var status int
+	filed(r, "adduser", &user)
+	status, err := CreateUser(&user)
 	if err != nil {
-		fmt.Printf("系统错误：%v\n",err)
+		fmt.Printf("System Error: %v\n",err)
 		panic(status)
 	}
 	w.Write(MapToBody(Map{
@@ -179,21 +202,10 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v\n", result)
+			fmt.Printf("System Error: %v\n", result)
 		}
 	}()
-	loginUsername := r.Header.Get("username")
-	role, err:= GetRole(loginUsername)
-	if err != nil {
-		fmt.Printf("系统错误：%v\n",err)
-		panic(ERROR)
-	}
-	if role == -1 {
-		panic(ERROR_USERNAME_NOT_EXIST)
-	}
-	if role != RoleSuperAdmin {
-		panic(NOPOWER)
-	}
+	CheckRole(RoleSuperAdmin, r)
 	params := RequestJsonInterface(r)
 	var id int
 	if tmp, ok := params["id"].(float64); !ok{
@@ -203,7 +215,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	status , err := DeleteUserInDb(id)
 	if err != nil {
-		fmt.Printf("系统错误：%v\n", err)
+		fmt.Printf("System Error: %v\n", err)
 		panic(ERROR_DATABASE_DELETE)
 	}
 	w.Write(MapToBody(Map{
@@ -227,83 +239,16 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v\n", result)
+			fmt.Printf("System Error: %v\n", result)
 		}
 	}()
-	loginUsername := r.Header.Get("username")
-	role, err:= GetRole(loginUsername)
-	if err != nil {
-		fmt.Printf("系统错误：%v\n",err)
-		panic(ERROR)
-	}
-	if role == -1 {
-		panic(ERROR_USERNAME_NOT_EXIST)
-	}
-	if role != RoleSuperAdmin {
-		panic(NOPOWER)
-	}
+	CheckRole(RoleSuperAdmin, r)
 	var user Account
-	var status, id int
-	params := RequestJsonInterface(r)
-
-	//类型断言
-	if username, ok := params["username"].(string); !ok {
-		panic(ERROR_USERNAME_TYPE_WRONG)
-	} else {
-		if username == "" {
-			panic(ERROR_USERNAME_NOT_NULL)
-		}
-		user.Username = username
-	}
-	if mail, ok := params["email"].(string); !ok {
-		panic(ERROR_MAIL_TYPE_WRONG)
-	} else {
-		if mail == "" {
-			panic(ERROR_MAIL_NOT_NULL)
-		}
-		user.Email = mail
-	}
-	if nickname, ok := params["nickname"].(string); !ok {
-		panic(ERROR_NICKNAME_TYPE_WRONG)
-	} else {
-		if nickname == "" {
-			panic(ERROR_NICKNAME_NOT_NULL)
-		}
-		user.Nickname = nickname
-	}
-	if role, ok := params["role"].(float64); !ok {
-		panic(ERROR_ROLE_TYPE_WRONG)
-	} else {
-		user.Role = int8(role)
-	}
-	user.UpdateTime = time.Now().Unix()
-
-	//数据库是否有记录
-	status = CheckUserName(user.Username)
-	if status != SUCCESS {
-		panic(status)
-		return
-	}
-	status = CheckNickName(user.Nickname)
-	if status != SUCCESS {
-		panic(status)
-		return
-	}
-	status = CheckEmail(user.Email)
-	if status != SUCCESS {
-		panic(status)
-		return
-	}
-
-	if tmp, ok := params["id"].(float64); !ok{
-		panic(ERROR_USERID_TYPE_WRONG)
-		return
-	} else {
-		id = int(tmp)
-	}
-	status, err = EditUser(id, &user)
+	var status int
+	filed(r, "modifyuser", &user);
+	status, err := EditUser(&user)
 	if err != nil {
-		fmt.Printf("系统错误：%v\n", err)
+		fmt.Printf("System Error: %v\n", err)
 		panic(ERROR_DATABASE_WRITE)
 	}
 	w.Write(MapToBody(Map{
@@ -327,23 +272,10 @@ func ListUser(w http.ResponseWriter, r *http.Request)  {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v\n", result)
+			fmt.Printf("System Error: %v\n", result)
 		}
 	}()
-	loginUsername := r.Header.Get("username")
-	//fmt.Println(loginUsername)
-	role, err:= GetRole(loginUsername)
-	//fmt.Println(role)
-	if err != nil {
-		fmt.Printf("系统错误：%v\n",err)
-		panic(ERROR)
-	}
-	if role == -1 {
-		panic(ERROR_USERNAME_NOT_EXIST)
-	}
-	if role != RoleSuperAdmin {
-		panic(NOPOWER)
-	}
+	CheckRole(RoleSuperAdmin, r)
 	params := RequestJsonInterface(r)
 	var pageSize, pageNum int
 	if tmp, ok := params["pagesize"].(float64); !ok {
@@ -365,7 +297,7 @@ func ListUser(w http.ResponseWriter, r *http.Request)  {
 	}
 	userList, err := GetUserList(pageSize, pageNum)
 	if err != nil {
-		fmt.Printf("系统错误：%v\n", err)
+		fmt.Printf("System Error: %v\n", err)
 		panic(ERROR_DATABASE_SEARCH)
 	}
 	w.Write(MapToBody(Map{
@@ -390,21 +322,10 @@ func GetUser(w http.ResponseWriter, r *http.Request)  {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v\n", result)
+			fmt.Printf("System Error: %v\n", result)
 		}
 	}()
-	loginUsername := r.Header.Get("username")
-	role, err:= GetRole(loginUsername)
-	if err != nil {
-		fmt.Printf("系统错误：%v\n",err)
-		panic(ERROR)
-	}
-	if role == -1 {
-		panic(ERROR_USERNAME_NOT_EXIST)
-	}
-	if role != RoleSuperAdmin {
-		panic(NOPOWER)
-	}
+	CheckRole(RoleSuperAdmin, r)
 	params := RequestJsonInterface(r)
 	var id, status int
 	if tmp, ok := params["id"].(float64); !ok{
@@ -419,7 +340,7 @@ func GetUser(w http.ResponseWriter, r *http.Request)  {
 
 	user, err := GetUserInDb(id)
 	if err != nil {
-		fmt.Printf("系统错误：%v\n",err)
+		fmt.Printf("System Error: %v\n",err)
 		panic(ERROR)
 	}
 	w.Write(MapToBody(Map{
@@ -444,79 +365,15 @@ func Join(w http.ResponseWriter, r *http.Request) {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v\n", result)
+			fmt.Printf("System Error: %v\n", result)
 		}
 	}()
 	var user Account
 	var status int
-	params := RequestJsonInterface(r)
-	//类型断言
-	if username, ok := params["username"].(string); !ok {
-		panic(ERROR_USERNAME_TYPE_WRONG)
-	} else {
-		if username == "" {
-			panic(ERROR_USERNAME_NOT_NULL)
-		}
-		user.Username = username
-	}
-	if mail, ok := params["email"].(string); !ok {
-		panic(ERROR_MAIL_TYPE_WRONG)
-	} else {
-		if mail == "" {
-			panic(ERROR_MAIL_NOT_NULL)
-		}
-		user.Email = mail
-	}
-	if nickname, ok := params["nickname"].(string); !ok {
-		panic(ERROR_NICKNAME_TYPE_WRONG)
-	} else {
-		if nickname == "" {
-			panic(ERROR_NICKNAME_NOT_NULL)
-		}
-		user.Nickname = nickname
-	}
-	if password, ok := params["password"].(string); !ok {
-		panic(ERROR_PASSWORD_TYPE_WRONG)
-	} else {
-		if password == "" {
-			panic(ERROR_PASSWORD_NOT_NULL)
-		}
-		user.Password = password
-	}
-	user.Role = 1
-	user.CreateTime = time.Now().Unix()
-
-	//检查字段
-	if !rightName(user.Username) {
-		panic(ERROR_USERNAME_TYPE_WRONG)
-	}
-	if !rightName(user.Nickname) {
-		panic(ERROR_NICKNAME_TYPE_WRONG)
-	}
-	if !rightPassword(user.Password) {
-		panic(ERROR_PASSWORD_TYPE_WRONG)
-	}
-	if !rightRole(user.Role) {
-		panic(ERROR_ROLE_TYPE_WRONG)
-	}
-
-	//数据库是否有记录
-	status = CheckUserName(user.Username)
-	if status != SUCCESS {
-		panic(status)
-	}
-	status = CheckNickName(user.Nickname)
-	if status != SUCCESS {
-		panic(status)
-	}
-	status = CheckEmail(user.Email)
-	if status != SUCCESS {
-		panic(status)
-	}
-
+	filed(r, "join", &user)
 	status, err := CreateUser(&user)
 	if err != nil {
-		fmt.Printf("系统错误：%v\n",err)
+		fmt.Printf("System Error: %v\n",err)
 		panic(status)
 	}
 	w.Write(MapToBody(Map{
@@ -541,7 +398,7 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 				"desc": GetErrorMessage(result),
 			}))
 		default:
-			fmt.Printf("系统错误：%v\n", result)
+			fmt.Printf("System Error: %v\n", result)
 		}
 	}()
 	var status, id int
@@ -550,7 +407,6 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 
 	if tmp, ok := params["id"].(float64); !ok{
 		panic(ERROR_USERID_TYPE_WRONG)
-		return
 	} else {
 		id = int(tmp)
 	}
@@ -580,7 +436,7 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 
 	status, err := EditPassword(id, oldPassword, newPassword)
 	if err != nil {
-		fmt.Printf("系统错误：%v\n",err)
+		fmt.Printf("System Error: %v\n",err)
 		panic(status)
 	}
 	w.Write(MapToBody(Map{

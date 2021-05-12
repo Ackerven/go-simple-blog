@@ -19,6 +19,8 @@ type Account struct {
 	CreateTime int64  `json:"create_time"` // 创建时间
 	UpdateTime int64  `json:"update_time"` // 更新时间
 }
+
+
 //用户名是否存在
 func CheckUserName(username string) int {
 	var user Account
@@ -55,7 +57,6 @@ func CheckUserID(id int) int  {
 	}
 	return SUCCESS
 }
-
 
 //将用户写入数据库
 func CreateUser(user *Account) (int,error) {
@@ -96,6 +97,7 @@ func ScryptPassword(password string) (string,error) {
 	FinalPassword := base64.StdEncoding.EncodeToString(HashPassword)
 	return FinalPassword, nil
 }
+
 //删除用户
 func DeleteUserInDb(id int) (int,error) {
 	err = db.Where("id = ?", id).Delete(&Account{}).Error
@@ -104,26 +106,29 @@ func DeleteUserInDb(id int) (int,error) {
 	}
 	return SUCCESS, nil
 }
+
 //编辑用户
-func EditUser(id int, user *Account) (int,error) {
+func EditUser(user *Account) (int,error) {
 	var userMap = make(map[string]interface{})
 	userMap["username"] = user.Username
 	userMap["email"] = user.Email
 	userMap["nickname"] = user.Nickname
 	userMap["role"] = user.Role
 	userMap["update_time"] = user.UpdateTime
-	err = db.Model(&Account{}).Where("id = ?", id).Updates(userMap).Error
+	err = db.Model(&Account{}).Where("id = ?", user.ID).Updates(userMap).Error
 	if err != nil {
 		return ERROR, err
 	}
 	return SUCCESS, nil
 }
+
 //获取单个用户的信息
 func GetUserInDb(id int) (Account,error){
 	var user Account
 	err = db.Where("id = ?", id).First(&user).Error
 	return user, err
 }
+
 //修改密码
 func EditPassword(id int, oldPassword, newPassword string) (int,error)  {
 	user, err := GetUserInDb(id)
@@ -148,17 +153,18 @@ func EditPassword(id int, oldPassword, newPassword string) (int,error)  {
 }
 
 //登陆验证
-func CheckLogin(username, passowrd string) int {
+func CheckLogin(username, password string) int {
 	var user Account
 	db.Where("username = ?", username).First(&user)
 	if user.ID == 0 {
 		return ERROR_USERNAME_NOT_EXIST
 	}
-	if key, _ := ScryptPassword(passowrd); key != user.Password {
+	if key, _ := ScryptPassword(password); key != user.Password {
 		return ERROR_PASSWORD_WRONG
 	}
 	return SUCCESS
 }
+
 // Role ?
 func GetRole(username string) (int ,error){
 	var user Account

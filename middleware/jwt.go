@@ -36,7 +36,7 @@ func SetToken(username string) (string,int) {
 }
 
 //验证token
-func VerifiToken(token string) (*Claims,int) {
+func VerifyToken(token string) (*Claims,int) {
 	setToken, _ := jwt.ParseWithClaims(token, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return JwtKey, nil
 	})
@@ -46,54 +46,6 @@ func VerifiToken(token string) (*Claims,int) {
 		return nil, utils.ERROR
 	}
 }
-
-//jwt
-//func JwtToken() gin.HandlerFunc {
-//	return func(c *gin.Context) {
-//		tokenHerder := c.Request.Header.Get("Authorization")
-//		var status int = utils.SUCCESS
-//		if tokenHerder == "" {
-//			status = utils.ERROR_TOKEN_NOT_EXIST
-//			c.JSON(http.StatusOK, gin.H{
-//				"status":status,
-//				"desc":utils.GetErrorMessage(status),
-//			})
-//			c.Abort()
-//			return
-//		}
-//		checkToken := strings.SplitN(tokenHerder, " ", 2)
-//		if len(checkToken) != 2 && checkToken[0] != "Bearer" {
-//			status = utils.ERROR_TOKEN_TYPE_WRONG
-//			c.JSON(http.StatusOK, gin.H{
-//				"status":status,
-//				"desc":utils.GetErrorMessage(status),
-//			})
-//			c.Abort()
-//			return
-//		}
-//		key, code := VerifiToken(checkToken[1])
-//		if code == utils.ERROR {
-//			status = utils.ERROR_TOKEN_WRONG
-//			c.JSON(http.StatusOK, gin.H{
-//				"status":status,
-//				"desc":utils.GetErrorMessage(status),
-//			})
-//			c.Abort()
-//			return
-//		}
-//		if time.Now().Unix() > key.ExpiresAt {
-//			status = utils.ERROR_TOKEN_RUNTIME
-//			c.JSON(http.StatusOK, gin.H{
-//				"status":status,
-//				"desc":utils.GetErrorMessage(status),
-//			})
-//			c.Abort()
-//			return
-//		}
-//		c.Set("username", key.Username)
-//		c.Next()
-//	}
-//}
 
 //jwt
 func JwtToken(h http.HandlerFunc) http.HandlerFunc {
@@ -123,7 +75,7 @@ func JwtToken(h http.HandlerFunc) http.HandlerFunc {
 		if len(checkToken) != 2 && checkToken[0] != "Bearer" {
 			panic(utils.ERROR_TOKEN_TYPE_WRONG)
 		}
-		key, status := VerifiToken(checkToken[1])
+		key, status := VerifyToken(checkToken[1])
 		if status != utils.SUCCESS {
 			panic(utils.ERROR_TOKEN_WRONG)
 		}
