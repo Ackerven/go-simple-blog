@@ -371,6 +371,7 @@ func Join(w http.ResponseWriter, r *http.Request) {
 	var user Account
 	var status int
 	filed(r, "join", &user)
+	user.Role = 1
 	status, err := CreateUser(&user)
 	if err != nil {
 		fmt.Printf("System Error: %v\n",err)
