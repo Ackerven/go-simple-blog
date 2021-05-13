@@ -9,6 +9,10 @@ import (
 )
 
 func Login(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		err := recover()
+		errHandle(w, err)
+	}()
 	var user Account
 	params := RequestJsonInterface(r)
 	//断言
