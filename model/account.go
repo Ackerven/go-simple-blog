@@ -11,9 +11,9 @@ import (
 // 账户表
 type Account struct {
 	ID         int    `gorm:"primary_key" json:"id"`    // 主键
-	Email      string `json:"email"`                    // 邮箱
-	Nickname   string `json:"nickname" gorm:"not null"` // 昵称
 	Username   string `json:"username" gorm:"not null"` // 用户名
+	Nickname   string `json:"nickname" gorm:"not null"` // 昵称
+	Email      string `json:"email"`                    // 邮箱
 	Role       int8   `json:"role" gorm:"not null"`     // 角色
 	Password   string // 密码
 	CreateTime int64  `json:"create_time"` // 创建时间
@@ -53,7 +53,7 @@ func CheckUserID(id int) int  {
 	var user Account
 	err := db.Where("id = ?", id).First(&user).Error
 	if err == gorm.ErrRecordNotFound {
-		return ERROR_USERID_NOT_EXIET
+		return ERROR_USERID_NOT_EXIST
 	}
 	return SUCCESS
 }

@@ -68,7 +68,7 @@ func CheckRole(userRole int, r *http.Request) {
 	}
 }
 //字段获取并检查
-func filed(r *http.Request, checkType string, user *Account)  {
+func MapToStruct(r *http.Request, checkType string, user *Account)  {
 	params := RequestJsonInterface(r)
 	//类型断言
 	if username, ok := params["username"].(string); !ok {
@@ -77,15 +77,14 @@ func filed(r *http.Request, checkType string, user *Account)  {
 		if username == "" {
 			panic(ERROR_USERNAME_NOT_NULL)
 		}
-		user.Username = username
-	}
-	if mail, ok := params["email"].(string); !ok {
-		panic(ERROR_MAIL_TYPE_WRONG)
-	} else {
-		if mail == "" {
-			panic(ERROR_MAIL_NOT_NULL)
+		if !rightName(user.Username) {
+			panic(ERROR_USERNAME_TYPE_WRONG)
 		}
-		user.Email = mail
+		status := CheckUserName(user.Username)
+		if status != SUCCESS {
+			panic(status)
+		}
+		user.Username = username
 	}
 	if nickname, ok := params["nickname"].(string); !ok {
 		panic(ERROR_NICKNAME_TYPE_WRONG)
@@ -93,7 +92,26 @@ func filed(r *http.Request, checkType string, user *Account)  {
 		if nickname == "" {
 			panic(ERROR_NICKNAME_NOT_NULL)
 		}
+		if !rightName(user.Nickname) {
+			panic(ERROR_NICKNAME_TYPE_WRONG)
+		}
+		status := CheckNickName(user.Nickname)
+		if status != SUCCESS {
+			panic(status)
+		}
 		user.Nickname = nickname
+	}
+	if mail, ok := params["email"].(string); !ok {
+		panic(ERROR_MAIL_TYPE_WRONG)
+	} else {
+		if mail == "" {
+			panic(ERROR_MAIL_NOT_NULL)
+		}
+		status := CheckEmail(user.Email)
+		if status != SUCCESS {
+			panic(status)
+		}
+		user.Email = mail
 	}
 
 	//除了join，都需要role字段
@@ -131,27 +149,21 @@ func filed(r *http.Request, checkType string, user *Account)  {
 		}
 		user.UpdateTime = time.Now().Unix()
 	}
-
-	//检查字段
-	if !rightName(user.Username) {
-		panic(ERROR_USERNAME_TYPE_WRONG)
+}
+//错误处理
+func errHandle(w http.ResponseWriter,err interface{})  {
+	if err == nil {
+		return
 	}
-	if !rightName(user.Nickname) {
-		panic(ERROR_NICKNAME_TYPE_WRONG)
-	}
-
-	//数据库是否有记录
-	status := CheckUserName(user.Username)
-	if status != SUCCESS {
-		panic(status)
-	}
-	status = CheckNickName(user.Nickname)
-	if status != SUCCESS {
-		panic(status)
-	}
-	status = CheckEmail(user.Email)
-	if status != SUCCESS {
-		panic(status)
+	switch result := err.(type) {
+	case int :
+		//status := err.(int)
+		w.Write(MapToBody(Map{
+			"status":result,
+			"desc": GetErrorMessage(result),
+		}))
+	default:
+		fmt.Printf("System Error: %v\n", result)
 	}
 }
 
@@ -159,24 +171,12 @@ func filed(r *http.Request, checkType string, user *Account)  {
 func AddUser(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	var user Account
 	var status int
-	filed(r, "adduser", &user)
+	MapToStruct(r, "adduser", &user)
 	status, err := CreateUser(&user)
 	if err != nil {
 		fmt.Printf("System Error: %v\n",err)
@@ -193,19 +193,7 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	params := RequestJsonInterface(r)
@@ -230,24 +218,12 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 func ModifyUser(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	var user Account
 	var status int
-	filed(r, "modifyuser", &user);
+	MapToStruct(r, "modifyuser", &user);
 	status, err := EditUser(&user)
 	if err != nil {
 		fmt.Printf("System Error: %v\n", err)
@@ -263,19 +239,7 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 func ListUser(w http.ResponseWriter, r *http.Request)  {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	params := RequestJsonInterface(r)
@@ -313,19 +277,7 @@ func ListUser(w http.ResponseWriter, r *http.Request)  {
 func GetUser(w http.ResponseWriter, r *http.Request)  {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	params := RequestJsonInterface(r)
@@ -356,23 +308,11 @@ func GetUser(w http.ResponseWriter, r *http.Request)  {
 func Join(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	var user Account
 	var status int
-	filed(r, "join", &user)
+	MapToStruct(r, "join", &user)
 	user.Role = 1
 	status, err := CreateUser(&user)
 	if err != nil {
@@ -390,19 +330,7 @@ func Join(w http.ResponseWriter, r *http.Request) {
 func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	var status, id int
 	var oldPassword, newPassword string
