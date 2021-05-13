@@ -20,7 +20,6 @@ type Account struct {
 	UpdateTime int64  `json:"update_time"` // 更新时间
 }
 
-
 //用户名是否存在
 func CheckUserName(username string) int {
 	var user Account
@@ -107,7 +106,7 @@ func DeleteUserInDb(id int) (int,error) {
 	return SUCCESS, nil
 }
 
-//编辑用户
+//修改用户
 func EditUser(user *Account) (int,error) {
 	var userMap = make(map[string]interface{})
 	userMap["username"] = user.Username
@@ -167,7 +166,7 @@ func CheckLogin(username, password string, id *int) int {
 	return SUCCESS
 }
 
-// Role ?
+// 获取Role
 func GetRole(id int) (int ,error){
 	var user Account
 	err = db.Where("id = ?", id).First(&user).Error

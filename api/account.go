@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 )
-
+//为接口服务的函数
 //检查用户名及昵称是否合法
 func rightName(username string) bool  {
 	str := []rune(username)
@@ -19,6 +19,7 @@ func rightName(username string) bool  {
 	}
 	return true
 }
+
 //检查密码是否合法
 func rightPassword(password string) bool {
 	//合法的密码：
@@ -46,10 +47,12 @@ func rightPassword(password string) bool {
 	}
 	return true
 }
+
 //用户类型检查
 func rightRole(role int8) bool {
 	return role >= int8(RoleUser) && role <= int8(RoleSuperAdmin)
 }
+
 //角色检查
 func CheckRole(userRole int, r *http.Request) {
 	cookie, _ := r.Cookie("login")
@@ -66,6 +69,7 @@ func CheckRole(userRole int, r *http.Request) {
 		panic(NO_POWER)
 	}
 }
+
 //字段获取并检查
 func MapToStruct(r *http.Request, checkType string, user *Account)  {
 	params := RequestJsonInterface(r)
@@ -150,6 +154,7 @@ func MapToStruct(r *http.Request, checkType string, user *Account)  {
 		user.UpdateTime = time.Now().Unix()
 	}
 }
+
 //错误处理
 func errHandle(w http.ResponseWriter,err interface{})  {
 	if err == nil {
@@ -167,6 +172,7 @@ func errHandle(w http.ResponseWriter,err interface{})  {
 	}
 }
 
+// 接口函数
 // 添加用户
 func AddUser(w http.ResponseWriter, r *http.Request) {
 	defer func() {
@@ -383,5 +389,47 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 	w.Write(MapToBody(Map{
 		"status" : status,
 		"desc" : GetErrorMessage(status),
+	}))
+}
+
+//登陆
+func Login(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		err := recover()
+		errHandle(w, err)
+	}()
+	var user Account
+	params := RequestJsonInterface(r)
+	//断言
+	if username, ok := params["username"].(string); !ok {
+		panic(ERROR_USERNAME_TYPE_WRONG)
+	} else {
+		if username == "" {
+			panic(ERROR_USERNAME_NOT_NULL)
+		}
+		user.Username = username
+	}
+	if password, ok := params["password"].(string); !ok {
+		panic(ERROR_PASSWORD_TYPE_WRONG)
+	} else {
+		if password == "" {
+			panic(ERROR_PASSWORD_NOT_NULL)
+		}
+		user.Password = password
+	}
+	var id int
+	status := CheckLogin(user.Username, user.Password, &id)
+	value := strconv.Itoa(id)
+	//fmt.Println(id)
+	cookie := http.Cookie{
+		Name: "login",
+		Value: value,
+		Path: "/",
+		Expires: time.Now().Add(24*time.Hour),
+	}
+	http.SetCookie(w, &cookie)
+	w.Write(MapToBody(Map{
+		"status":status,
+		"desc":GetErrorMessage(status),
 	}))
 }
