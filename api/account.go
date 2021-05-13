@@ -222,10 +222,17 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 		err := recover()
 		errHandle(w, err)
 	}()
-	CheckRole(RoleSuperAdmin, r)
 	var user Account
 	MapToStruct(r, "modifyuser", &user)
-	CheckUserID(user.ID)
+	cookie, _ := r.Cookie("login")
+	loginId, _ := strconv.Atoi(cookie.Value)
+	status := CheckUserID(user.ID)
+	if status != SUCCESS {
+		panic(ERROR_USERNAME_NOT_EXIST)
+	}
+	if loginId != user.ID {
+		CheckRole(RoleSuperAdmin, r)
+	}
 	status, err := EditUser(&user)
 	if err != nil {
 		fmt.Printf("System Error: %v\n", err)
