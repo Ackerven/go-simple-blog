@@ -202,6 +202,9 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	} else {
 		id = int(tmp)
 	}
+	if status := CheckUserID(id); status != SUCCESS {
+		panic(status)
+	}
 	status , err := DeleteUserInDb(id)
 	if err != nil {
 		fmt.Printf("System Error: %v\n", err)
@@ -330,17 +333,21 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 		errHandle(w, err)
 	}()
 	var status, id int
+	cookie, _ := r.Cookie("login")
+	loginId, _ := strconv.Atoi(cookie.Value)
 	var oldPassword, newPassword string
 	params := RequestJsonInterface(r)
-
 	if tmp, ok := params["id"].(float64); !ok{
 		panic(ERROR_USERID_TYPE_WRONG)
 	} else {
 		id = int(tmp)
-	}
-	status = CheckUserID(id)
-	if status != SUCCESS {
-		panic(ERROR_USERNAME_NOT_EXIST)
+		if loginId != id {
+			panic(NO_POWER)
+		}
+		status = CheckUserID(id)
+		if status != SUCCESS {
+			panic(ERROR_USERNAME_NOT_EXIST)
+		}
 	}
 	if tmp, ok := params["oldpassword"].(string); !ok {
 		panic(ERROR_PASSWORD_WRONG)
