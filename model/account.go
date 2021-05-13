@@ -63,11 +63,11 @@ func CreateUser(user *Account) (int,error) {
 	var err error
 	user.Password, err = ScryptPassword(user.Password)
 	if err != nil {
-		return ERROR, err
+		return SYSTEM_ERROR, err
 	}
 	err = db.Create(&user).Error
 	if err != nil {
-		return ERROR, err
+		return ERROR_DATABASE_WRITE, err
 	}
 	return SUCCESS, nil
 }
@@ -102,7 +102,7 @@ func ScryptPassword(password string) (string,error) {
 func DeleteUserInDb(id int) (int,error) {
 	err = db.Where("id = ?", id).Delete(&Account{}).Error
 	if err != nil {
-		return ERROR, err
+		return ERROR_DATABASE_DELETE, err
 	}
 	return SUCCESS, nil
 }
@@ -117,7 +117,7 @@ func EditUser(user *Account) (int,error) {
 	userMap["update_time"] = user.UpdateTime
 	err = db.Model(&Account{}).Where("id = ?", user.ID).Updates(userMap).Error
 	if err != nil {
-		return ERROR, err
+		return ERROR_DATABASE_WRITE, err
 	}
 	return SUCCESS, nil
 }
@@ -133,7 +133,7 @@ func GetUserInDb(id int) (Account,error){
 func EditPassword(id int, oldPassword, newPassword string) (int,error)  {
 	user, err := GetUserInDb(id)
 	if err != nil {
-		return SUCCESS, err
+		return SYSTEM_ERROR, err
 	}
 	if tmp, _ := ScryptPassword(oldPassword); tmp != user.Password {
 		return ERROR_PASSWORD_WRONG, nil
@@ -141,13 +141,13 @@ func EditPassword(id int, oldPassword, newPassword string) (int,error)  {
 	var userMap = make(map[string]interface{})
 	tmp, err := ScryptPassword(newPassword)
 	if err != nil {
-		return ERROR, err
+		return SYSTEM_ERROR, err
 	}
 	userMap["password"] = tmp
 	userMap["update_time"] = time.Now().Unix()
 	err = db.Model(&Account{}).Where("id = ?", id).Updates(userMap).Error
 	if err != nil {
-		return ERROR, err
+		return SYSTEM_ERROR, err
 	}
 	return SUCCESS, nil
 }

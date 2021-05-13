@@ -10,7 +10,8 @@ package utils
 const (
 	SUCCESS = 1
 	ERROR 	= 0
-	NOPOWER = 2
+	NO_POWER = 2
+	SYSTEM_ERROR = 3
 
 	//文章
 
@@ -64,7 +65,8 @@ const (
 var errorStatus = map[int]string{
 	SUCCESS : "OK",
 	ERROR : "FAILED",
-	NOPOWER: "没有权限",
+	SYSTEM_ERROR : "系统错误",
+	NO_POWER: "没有权限",
 
 	ERROR_AUTHOR_ID_NOT_EXIST : "作者ID不存在",
 	ERROR_AUTHOR_ID_NOT_NULL : "作者ID不能为空",

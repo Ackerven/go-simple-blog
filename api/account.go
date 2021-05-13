@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-
 //检查用户名及昵称是否合法
 func rightName(username string) bool  {
 	str := []rune(username)
@@ -58,13 +57,13 @@ func CheckRole(userRole int, r *http.Request) {
 	role, err:= GetRole(id)
 	if err != nil {
 		fmt.Printf("System Error: %v\n",err)
-		panic(ERROR)
+		panic(SYSTEM_ERROR)
 	}
 	if role == -1 {
 		panic(ERROR_USERNAME_NOT_EXIST)
 	}
 	if role != userRole {
-		panic(NOPOWER)
+		panic(NO_POWER)
 	}
 }
 //字段获取并检查
@@ -119,11 +118,12 @@ func MapToStruct(r *http.Request, checkType string, user *Account)  {
 		if role, ok := params["role"].(float64); !ok {
 			panic(ERROR_ROLE_TYPE_WRONG)
 		} else {
+			if !rightRole(user.Role) {
+				panic(ERROR_ROLE_TYPE_WRONG)
+			}
 			user.Role = int8(role)
 		}
-		if !rightRole(user.Role) {
-			panic(ERROR_ROLE_TYPE_WRONG)
-		}
+
 	}
 	//除了modifyuser，都需要password字段及创建时间
 	if checkType == "adduser" || checkType == "join" {
@@ -133,10 +133,10 @@ func MapToStruct(r *http.Request, checkType string, user *Account)  {
 			if password == "" {
 				panic(ERROR_PASSWORD_NOT_NULL)
 			}
+			if !rightPassword(user.Password) {
+				panic(ERROR_PASSWORD_TYPE_WRONG)
+			}
 			user.Password = password
-		}
-		if !rightPassword(user.Password) {
-			panic(ERROR_PASSWORD_TYPE_WRONG)
 		}
 		user.CreateTime = time.Now().Unix()
 	}
@@ -175,7 +175,6 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	var user Account
-	var status int
 	MapToStruct(r, "adduser", &user)
 	status, err := CreateUser(&user)
 	if err != nil {
@@ -206,7 +205,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	status , err := DeleteUserInDb(id)
 	if err != nil {
 		fmt.Printf("System Error: %v\n", err)
-		panic(ERROR_DATABASE_DELETE)
+		panic(status)
 	}
 	w.Write(MapToBody(Map{
 		"status": status,
@@ -222,12 +221,12 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	var user Account
-	var status int
-	MapToStruct(r, "modifyuser", &user);
+	MapToStruct(r, "modifyuser", &user)
+	CheckUserID(user.ID)
 	status, err := EditUser(&user)
 	if err != nil {
 		fmt.Printf("System Error: %v\n", err)
-		panic(ERROR_DATABASE_WRITE)
+		panic(status)
 	}
 	w.Write(MapToBody(Map{
 		"status": status,
@@ -291,11 +290,10 @@ func GetUser(w http.ResponseWriter, r *http.Request)  {
 	if status = CheckUserID(id); status != SUCCESS {
 		panic(status)
 	}
-
 	user, err := GetUserInDb(id)
 	if err != nil {
 		fmt.Printf("System Error: %v\n",err)
-		panic(ERROR)
+		panic(SYSTEM_ERROR)
 	}
 	w.Write(MapToBody(Map{
 		"status":status,
@@ -311,7 +309,6 @@ func Join(w http.ResponseWriter, r *http.Request) {
 		errHandle(w, err)
 	}()
 	var user Account
-	var status int
 	MapToStruct(r, "join", &user)
 	user.Role = 1
 	status, err := CreateUser(&user)
@@ -364,7 +361,6 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 		}
 		newPassword = tmp
 	}
-
 	status, err := EditPassword(id, oldPassword, newPassword)
 	if err != nil {
 		fmt.Printf("System Error: %v\n",err)
