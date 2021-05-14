@@ -11,15 +11,14 @@ import (
 // 账户表
 type Account struct {
 	ID         int    `gorm:"primary_key" json:"id"`    // 主键
-	Email      string `json:"email"`                    // 邮箱
-	Nickname   string `json:"nickname" gorm:"not null"` // 昵称
 	Username   string `json:"username" gorm:"not null"` // 用户名
+	Nickname   string `json:"nickname" gorm:"not null"` // 昵称
+	Email      string `json:"email"`                    // 邮箱
 	Role       int8   `json:"role" gorm:"not null"`     // 角色
 	Password   string // 密码
 	CreateTime int64  `json:"create_time"` // 创建时间
 	UpdateTime int64  `json:"update_time"` // 更新时间
 }
-
 
 //用户名是否存在
 func CheckUserName(username string) int {
@@ -53,7 +52,7 @@ func CheckUserID(id int) int  {
 	var user Account
 	err := db.Where("id = ?", id).First(&user).Error
 	if err == gorm.ErrRecordNotFound {
-		return ERROR_USERID_NOT_EXIET
+		return ERROR_USERID_NOT_EXIST
 	}
 	return SUCCESS
 }
@@ -63,11 +62,11 @@ func CreateUser(user *Account) (int,error) {
 	var err error
 	user.Password, err = ScryptPassword(user.Password)
 	if err != nil {
-		return ERROR, err
+		return SYSTEM_ERROR, err
 	}
 	err = db.Create(&user).Error
 	if err != nil {
-		return ERROR, err
+		return ERROR_DATABASE_WRITE, err
 	}
 	return SUCCESS, nil
 }
@@ -102,12 +101,12 @@ func ScryptPassword(password string) (string,error) {
 func DeleteUserInDb(id int) (int,error) {
 	err = db.Where("id = ?", id).Delete(&Account{}).Error
 	if err != nil {
-		return ERROR, err
+		return ERROR_DATABASE_DELETE, err
 	}
 	return SUCCESS, nil
 }
 
-//编辑用户
+//修改用户
 func EditUser(user *Account) (int,error) {
 	var userMap = make(map[string]interface{})
 	userMap["username"] = user.Username
@@ -117,7 +116,7 @@ func EditUser(user *Account) (int,error) {
 	userMap["update_time"] = user.UpdateTime
 	err = db.Model(&Account{}).Where("id = ?", user.ID).Updates(userMap).Error
 	if err != nil {
-		return ERROR, err
+		return ERROR_DATABASE_WRITE, err
 	}
 	return SUCCESS, nil
 }
@@ -133,7 +132,7 @@ func GetUserInDb(id int) (Account,error){
 func EditPassword(id int, oldPassword, newPassword string) (int,error)  {
 	user, err := GetUserInDb(id)
 	if err != nil {
-		return SUCCESS, err
+		return SYSTEM_ERROR, err
 	}
 	if tmp, _ := ScryptPassword(oldPassword); tmp != user.Password {
 		return ERROR_PASSWORD_WRONG, nil
@@ -141,13 +140,13 @@ func EditPassword(id int, oldPassword, newPassword string) (int,error)  {
 	var userMap = make(map[string]interface{})
 	tmp, err := ScryptPassword(newPassword)
 	if err != nil {
-		return ERROR, err
+		return SYSTEM_ERROR, err
 	}
 	userMap["password"] = tmp
 	userMap["update_time"] = time.Now().Unix()
 	err = db.Model(&Account{}).Where("id = ?", id).Updates(userMap).Error
 	if err != nil {
-		return ERROR, err
+		return SYSTEM_ERROR, err
 	}
 	return SUCCESS, nil
 }
@@ -167,7 +166,7 @@ func CheckLogin(username, password string, id *int) int {
 	return SUCCESS
 }
 
-// Role ?
+// 获取Role
 func GetRole(id int) (int ,error){
 	var user Account
 	err = db.Where("id = ?", id).First(&user).Error

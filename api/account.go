@@ -8,8 +8,7 @@ import (
 	"strconv"
 	"time"
 )
-
-
+//为接口服务的函数
 //检查用户名及昵称是否合法
 func rightName(username string) bool  {
 	str := []rune(username)
@@ -20,6 +19,7 @@ func rightName(username string) bool  {
 	}
 	return true
 }
+
 //检查密码是否合法
 func rightPassword(password string) bool {
 	//合法的密码：
@@ -47,10 +47,12 @@ func rightPassword(password string) bool {
 	}
 	return true
 }
+
 //用户类型检查
 func rightRole(role int8) bool {
 	return role >= int8(RoleUser) && role <= int8(RoleSuperAdmin)
 }
+
 //角色检查
 func CheckRole(userRole int, r *http.Request) {
 	cookie, _ := r.Cookie("login")
@@ -58,17 +60,22 @@ func CheckRole(userRole int, r *http.Request) {
 	role, err:= GetRole(id)
 	if err != nil {
 		fmt.Printf("System Error: %v\n",err)
-		panic(ERROR)
+		panic(SYSTEM_ERROR)
 	}
 	if role == -1 {
 		panic(ERROR_USERNAME_NOT_EXIST)
 	}
 	if role != userRole {
-		panic(NOPOWER)
+		panic(NO_POWER)
 	}
 }
+
 //字段获取并检查
-func filed(r *http.Request, checkType string, user *Account)  {
+func MapToStruct(w http.ResponseWriter, r *http.Request, checkType string, user *Account)  {
+	defer func() {
+		err := recover()
+		errHandle(w, err)
+	}()
 	params := RequestJsonInterface(r)
 	//类型断言
 	if username, ok := params["username"].(string); !ok {
@@ -77,15 +84,14 @@ func filed(r *http.Request, checkType string, user *Account)  {
 		if username == "" {
 			panic(ERROR_USERNAME_NOT_NULL)
 		}
-		user.Username = username
-	}
-	if mail, ok := params["email"].(string); !ok {
-		panic(ERROR_MAIL_TYPE_WRONG)
-	} else {
-		if mail == "" {
-			panic(ERROR_MAIL_NOT_NULL)
+		if !rightName(username) {
+			panic(ERROR_USERNAME_TYPE_WRONG)
 		}
-		user.Email = mail
+		status := CheckUserName(username)
+		if status != SUCCESS {
+			panic(status)
+		}
+		user.Username = username
 	}
 	if nickname, ok := params["nickname"].(string); !ok {
 		panic(ERROR_NICKNAME_TYPE_WRONG)
@@ -93,7 +99,26 @@ func filed(r *http.Request, checkType string, user *Account)  {
 		if nickname == "" {
 			panic(ERROR_NICKNAME_NOT_NULL)
 		}
+		if !rightName(nickname) {
+			panic(ERROR_NICKNAME_TYPE_WRONG)
+		}
+		status := CheckNickName(nickname)
+		if status != SUCCESS {
+			panic(status)
+		}
 		user.Nickname = nickname
+	}
+	if mail, ok := params["email"].(string); !ok {
+		panic(ERROR_MAIL_TYPE_WRONG)
+	} else {
+		if mail == "" {
+			panic(ERROR_MAIL_NOT_NULL)
+		}
+		status := CheckEmail(mail)
+		if status != SUCCESS {
+			panic(status)
+		}
+		user.Email = mail
 	}
 
 	//除了join，都需要role字段
@@ -101,11 +126,12 @@ func filed(r *http.Request, checkType string, user *Account)  {
 		if role, ok := params["role"].(float64); !ok {
 			panic(ERROR_ROLE_TYPE_WRONG)
 		} else {
+			if !rightRole(int8(role)) {
+				panic(ERROR_ROLE_TYPE_WRONG)
+			}
 			user.Role = int8(role)
 		}
-		if !rightRole(user.Role) {
-			panic(ERROR_ROLE_TYPE_WRONG)
-		}
+
 	}
 	//除了modifyuser，都需要password字段及创建时间
 	if checkType == "adduser" || checkType == "join" {
@@ -115,10 +141,11 @@ func filed(r *http.Request, checkType string, user *Account)  {
 			if password == "" {
 				panic(ERROR_PASSWORD_NOT_NULL)
 			}
+			//fmt.Println(password)
+			if !rightPassword(password) {
+				panic(ERROR_PASSWORD_TYPE_WRONG)
+			}
 			user.Password = password
-		}
-		if !rightPassword(user.Password) {
-			panic(ERROR_PASSWORD_TYPE_WRONG)
 		}
 		user.CreateTime = time.Now().Unix()
 	}
@@ -131,52 +158,35 @@ func filed(r *http.Request, checkType string, user *Account)  {
 		}
 		user.UpdateTime = time.Now().Unix()
 	}
+}
 
-	//检查字段
-	if !rightName(user.Username) {
-		panic(ERROR_USERNAME_TYPE_WRONG)
+//错误处理
+func errHandle(w http.ResponseWriter,err interface{})  {
+	if err == nil {
+		return
 	}
-	if !rightName(user.Nickname) {
-		panic(ERROR_NICKNAME_TYPE_WRONG)
-	}
-
-	//数据库是否有记录
-	status := CheckUserName(user.Username)
-	if status != SUCCESS {
-		panic(status)
-	}
-	status = CheckNickName(user.Nickname)
-	if status != SUCCESS {
-		panic(status)
-	}
-	status = CheckEmail(user.Email)
-	if status != SUCCESS {
-		panic(status)
+	switch result := err.(type) {
+	case int :
+		//status := err.(int)
+		w.Write(MapToBody(Map{
+			"status":result,
+			"desc": GetErrorMessage(result),
+		}))
+	default:
+		fmt.Printf("System Error: %v\n", result)
 	}
 }
 
+// 接口函数
 // 添加用户
 func AddUser(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	var user Account
-	var status int
-	filed(r, "adduser", &user)
+	MapToStruct(w, r, "adduser", &user)
 	status, err := CreateUser(&user)
 	if err != nil {
 		fmt.Printf("System Error: %v\n",err)
@@ -193,19 +203,7 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	params := RequestJsonInterface(r)
@@ -215,10 +213,13 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	} else {
 		id = int(tmp)
 	}
+	if status := CheckUserID(id); status != SUCCESS {
+		panic(status)
+	}
 	status , err := DeleteUserInDb(id)
 	if err != nil {
 		fmt.Printf("System Error: %v\n", err)
-		panic(ERROR_DATABASE_DELETE)
+		panic(status)
 	}
 	w.Write(MapToBody(Map{
 		"status": status,
@@ -230,28 +231,23 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 func ModifyUser(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
-	CheckRole(RoleSuperAdmin, r)
 	var user Account
-	var status int
-	filed(r, "modifyuser", &user);
+	MapToStruct(w, r, "modifyuser", &user)
+	cookie, _ := r.Cookie("login")
+	loginId, _ := strconv.Atoi(cookie.Value)
+	status := CheckUserID(user.ID)
+	if status != SUCCESS {
+		panic(ERROR_USERNAME_NOT_EXIST)
+	}
+	if loginId != user.ID {
+		CheckRole(RoleSuperAdmin, r)
+	}
 	status, err := EditUser(&user)
 	if err != nil {
 		fmt.Printf("System Error: %v\n", err)
-		panic(ERROR_DATABASE_WRITE)
+		panic(status)
 	}
 	w.Write(MapToBody(Map{
 		"status": status,
@@ -263,19 +259,7 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 func ListUser(w http.ResponseWriter, r *http.Request)  {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	params := RequestJsonInterface(r)
@@ -313,19 +297,7 @@ func ListUser(w http.ResponseWriter, r *http.Request)  {
 func GetUser(w http.ResponseWriter, r *http.Request)  {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	params := RequestJsonInterface(r)
@@ -339,11 +311,10 @@ func GetUser(w http.ResponseWriter, r *http.Request)  {
 	if status = CheckUserID(id); status != SUCCESS {
 		panic(status)
 	}
-
 	user, err := GetUserInDb(id)
 	if err != nil {
 		fmt.Printf("System Error: %v\n",err)
-		panic(ERROR)
+		panic(SYSTEM_ERROR)
 	}
 	w.Write(MapToBody(Map{
 		"status":status,
@@ -356,23 +327,10 @@ func GetUser(w http.ResponseWriter, r *http.Request)  {
 func Join(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	var user Account
-	var status int
-	filed(r, "join", &user)
+	MapToStruct(w, r, "join", &user)
 	user.Role = 1
 	status, err := CreateUser(&user)
 	if err != nil {
@@ -390,32 +348,24 @@ func Join(w http.ResponseWriter, r *http.Request) {
 func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		err := recover()
-		if err == nil {
-			return
-		}
-		switch result := err.(type) {
-		case int :
-			//status := err.(int)
-			w.Write(MapToBody(Map{
-				"status":result,
-				"desc": GetErrorMessage(result),
-			}))
-		default:
-			fmt.Printf("System Error: %v\n", result)
-		}
+		errHandle(w, err)
 	}()
 	var status, id int
+	cookie, _ := r.Cookie("login")
+	loginId, _ := strconv.Atoi(cookie.Value)
 	var oldPassword, newPassword string
 	params := RequestJsonInterface(r)
-
 	if tmp, ok := params["id"].(float64); !ok{
 		panic(ERROR_USERID_TYPE_WRONG)
 	} else {
 		id = int(tmp)
-	}
-	status = CheckUserID(id)
-	if status != SUCCESS {
-		panic(ERROR_USERNAME_NOT_EXIST)
+		if loginId != id {
+			panic(NO_POWER)
+		}
+		status = CheckUserID(id)
+		if status != SUCCESS {
+			panic(ERROR_USERNAME_NOT_EXIST)
+		}
 	}
 	if tmp, ok := params["oldpassword"].(string); !ok {
 		panic(ERROR_PASSWORD_WRONG)
@@ -436,7 +386,6 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 		}
 		newPassword = tmp
 	}
-
 	status, err := EditPassword(id, oldPassword, newPassword)
 	if err != nil {
 		fmt.Printf("System Error: %v\n",err)
@@ -445,5 +394,47 @@ func ModifyPassword(w http.ResponseWriter, r *http.Request) {
 	w.Write(MapToBody(Map{
 		"status" : status,
 		"desc" : GetErrorMessage(status),
+	}))
+}
+
+//登陆
+func Login(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		err := recover()
+		errHandle(w, err)
+	}()
+	var user Account
+	params := RequestJsonInterface(r)
+	//断言
+	if username, ok := params["username"].(string); !ok {
+		panic(ERROR_USERNAME_TYPE_WRONG)
+	} else {
+		if username == "" {
+			panic(ERROR_USERNAME_NOT_NULL)
+		}
+		user.Username = username
+	}
+	if password, ok := params["password"].(string); !ok {
+		panic(ERROR_PASSWORD_TYPE_WRONG)
+	} else {
+		if password == "" {
+			panic(ERROR_PASSWORD_NOT_NULL)
+		}
+		user.Password = password
+	}
+	var id int
+	status := CheckLogin(user.Username, user.Password, &id)
+	value := strconv.Itoa(id)
+	//fmt.Println(id)
+	cookie := http.Cookie{
+		Name: "login",
+		Value: value,
+		Path: "/",
+		Expires: time.Now().Add(24*time.Hour),
+	}
+	http.SetCookie(w, &cookie)
+	w.Write(MapToBody(Map{
+		"status":status,
+		"desc":GetErrorMessage(status),
 	}))
 }
