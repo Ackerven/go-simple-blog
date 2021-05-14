@@ -80,10 +80,10 @@ func MapToStruct(r *http.Request, checkType string, user *Account)  {
 		if username == "" {
 			panic(ERROR_USERNAME_NOT_NULL)
 		}
-		if !rightName(user.Username) {
+		if !rightName(username) {
 			panic(ERROR_USERNAME_TYPE_WRONG)
 		}
-		status := CheckUserName(user.Username)
+		status := CheckUserName(username)
 		if status != SUCCESS {
 			panic(status)
 		}
@@ -95,10 +95,10 @@ func MapToStruct(r *http.Request, checkType string, user *Account)  {
 		if nickname == "" {
 			panic(ERROR_NICKNAME_NOT_NULL)
 		}
-		if !rightName(user.Nickname) {
+		if !rightName(nickname) {
 			panic(ERROR_NICKNAME_TYPE_WRONG)
 		}
-		status := CheckNickName(user.Nickname)
+		status := CheckNickName(nickname)
 		if status != SUCCESS {
 			panic(status)
 		}
@@ -110,7 +110,7 @@ func MapToStruct(r *http.Request, checkType string, user *Account)  {
 		if mail == "" {
 			panic(ERROR_MAIL_NOT_NULL)
 		}
-		status := CheckEmail(user.Email)
+		status := CheckEmail(mail)
 		if status != SUCCESS {
 			panic(status)
 		}
@@ -122,7 +122,7 @@ func MapToStruct(r *http.Request, checkType string, user *Account)  {
 		if role, ok := params["role"].(float64); !ok {
 			panic(ERROR_ROLE_TYPE_WRONG)
 		} else {
-			if !rightRole(user.Role) {
+			if !rightRole(int8(role)) {
 				panic(ERROR_ROLE_TYPE_WRONG)
 			}
 			user.Role = int8(role)
@@ -137,7 +137,8 @@ func MapToStruct(r *http.Request, checkType string, user *Account)  {
 			if password == "" {
 				panic(ERROR_PASSWORD_NOT_NULL)
 			}
-			if !rightPassword(user.Password) {
+			//fmt.Println(password)
+			if !rightPassword(password) {
 				panic(ERROR_PASSWORD_TYPE_WRONG)
 			}
 			user.Password = password
