@@ -1,0 +1,349 @@
+package blog
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	."simple-blog/model"
+	."simple-blog/utils"
+	"time"
+	"unicode"
+)
+//检查作者id是否合理
+//id全为数字，没有字母和其他符号
+func heliid(author_id string)  bool{
+	if len(author_id) <1{
+		return false;
+	}
+	str :=[]rune(author_id)
+	count := 0
+	 for _, s := range str{
+	 	if(s >= 'a' && s <='z') || (s >='A' && s <= 'Z'){
+	 		count++
+		}
+	 }
+	 if(count != 0){
+	 	return false//它就不只有数字，还含有其他的
+	 }
+	 return true//只有数字
+}
+//判断一下作者的级别
+func jibieRole(role int8) bool{
+	return role >= int8(RoleUser) && role <= int8(RoleSuperAdmin)
+}
+//判断一下标题的格式
+func rightTitle(title string) bool{
+	str := []rune(title)
+	for _, s := range str{
+		if (s >= 'A' && s <= 'Z') || ( s >= 'a' && s <= 'z') || ( s >= '0' && s <= '9') || s == '_' {
+			return true;
+		}
+	}
+	return false;
+}
+//好像发布文章前要实例编辑器？编辑器是不是就是我们后端服务器用的？我也不知道哇啊啊啊
+if($('text-editor').length){
+	editorIndex = layedit.build('text-editor',{
+		height : 450//初始化编辑器，还把编辑器的高度初始化为450px高（我也不知道为什么要初始为450，应该其他高度也行的吧？）
+});
+}
+//发布文章的相关操作
+form.on('submit(article-publish)',function(data)){
+	let postData = data.field;
+	postData.id = Number(postData.id)
+	if(!postData.title){
+		return layer.msg("你忘记写标题啦~要记得写标题喔");//标题不能为空,没有文章标题，不能作为独立文章来提交，用户点击不到
+    }
+    //同步编辑器内容,应该是同步到后端的服务器端
+    layedit.sync(editorIndex);
+	postData.content = $('#text-editor').val();
+	$.post("/article/publish",postData,function(res){
+		if(res.code == 0){
+			layer.alert(res.msg,function(){
+				window.location.href = "/article/"+res.data.id;
+    });
+    }
+    else{
+    	layer.msg(res.msg);
+    }
+     },'json');
+    return false;
+});
+//文章发布时的操作，页面和后端绑定？
+func ArticlePublish(ctx iris.Context) {
+	//发布的时候要先登录吧
+	if !ctx.Values().GetBoolDefault("hasLogin",false){
+		InternalServerError(ctx)
+		return
+	}
+	id := unit(ctx.URLParamIntDefault("id",0))//
+	if id > 0 {
+		article, _ := provider.GetArticleById(id)//这个需要访问数据库读取文章内容
+		ctx.ViewData("article",article)
+	}//这一段，是在发布页面呈现之前，先判断页面路径中，是否含有文章id，如果有，就认为在修改文章吧，就先从数据库里读出文章，再注入到页面里
+	ctx.View("article/publish.html")//这个用来关联文章发布页面
+	
+}
+//发布文章
+func ArticlePublishForm(ctx iris.Context){
+	//发布时必须登录
+	if !ctx.Values().GetBoolDefault("hasLogin",false){
+		ctx.JSON(iris.Map{
+			"code":config.StatusFailed,
+			"msg":"登录后方可继续操作",
+		})
+		return
+	}
+	var req request.Article
+	if err := ctx.ReadForm(&req); err != nil{
+		ctx.JSON(iris.Map{
+			"code" : config.StatusFailed,
+			"msg" : err.Error(),
+		})
+		return
+	}
+	var category *model.Category
+	var err error
+	//检查分类
+	if req.CategoryName != ""{
+		category,err = provider.GetCategoryByTitle(req.CategoryName)
+		if err != nil{
+			category = &model.Category{
+				Title: req.CategoryName,
+				Status: 1,
+			}
+			err  = category.Save(config.DB)
+			if err != nil{
+				ctx.JSON(iris.Map{
+					"code": config.StatusFailed,
+					"msg": err.Error(),
+				})
+				return
+			}
+		}
+	}
+	var article *model.Article
+	if req.Id > 0{
+		article, err = provider.GetArticleById(req.Id)
+		if err != nil{
+			ctx.JSON(iris.Map{
+				"code": config.StatusFailed,
+				"msg": err.Error(),
+			})
+			return
+		}
+		if article.ArticleData == nil{
+			article.ArticleData == &model.ArticleData{}
+		}
+		article.ArticleData.Content = req.Content
+	}
+	else{
+		article = &model.Article{
+			Title: req.Title,//标题
+			keywords: req.Keywords,//标题的关键字
+			Description: req.Description,//文章简介
+			Status: 1,
+			ArticleData: &model.ArticleData{
+				Content:req.Content,//文章内容
+			},
+
+		}
+	}
+	//提取描述
+	if req.Description == ""{
+		htmlR := string.NewReader(req.Content)
+		doc,err := goquery.NewDocumentFromReader(htmlR)
+		if err == nil {
+			textRune := []rune(string.TrimSpace(doc.Text()))
+			if len(textRune) > 150{
+				article.Description = string(textRune[:150])
+			}
+			else{
+				article.Description = string(textRune)
+			}
+		}
+		if category != nil{
+			article.CategoryId = category.Id
+		}
+		err = article.Save(config.DB)
+		if err != nil {
+			ctx.JSON(iris.Map{
+				"code":config.StatusFailed,
+				"msg":err.Error(),
+			})
+			return
+		}
+		ctx.JSON(iris.Map{
+			"code":config.StatusOK,
+			"msg":"发布成功啦~",
+			"data":article,
+		})
+	}
+}
+//增加文章
+func AddPosts(w http.ResponseWriter,r *http.Request)  {
+	defer func(){
+		if err == nil{
+			return
+		}
+		switch result := err.(type) {
+		case int:
+			w.Write(MapToBody(Map{
+			"status":result,
+			"desc":GetErrorMessage(result),
+			}))
+		default:
+			fmt.Printf("System Author:%v\n",result)
+		}
+	}()
+	CheckRole(RoleSuperAdmin,r)
+	var author json.Number
+	var status int
+	text(r,"goodauthor",&author);
+	status,err := CreateAuthor(&author)
+	if err := nil{
+		fmt.Printf("System Error:%v\n",err)
+		panic(status)
+	}
+	w.Write(MapToBody(Map{
+		"status":status,
+		"desc":GetErrorMessage(status),
+		"id": text.id,
+	}))
+}
+//删除文章
+func DeletePosts(w http.ResponseWriter,r *http.Request)  {
+	defer func() {
+		err := recover()
+		if err == nil{
+			return
+		}
+		switch result := err(type) {
+		case int:
+			w.Write(MapToBody(Map{
+			"status":result,
+			"desc":GetErrorMessage(result),
+			}))
+		default:
+			fmt.Printf("System Error:%v\n",err)
+		}
+	}()
+	var text.id int
+	if tmp, ok := params["text.id"],(float64);
+	!ok{
+		panic(ERROR_TEXTID_TYPE_WRONG)
+	}
+	else{
+		text.id = int(tmp)
+	}
+	status , err := DeleteTextIdDB(text.id)
+	if err != nil{
+		fmt.Printf("System Error:&v\n",err)
+		panic(ERROR_DATABASE_DALETE)
+	}
+	w.Write(MapToBody(Map{
+	"status":status,
+	"desc":GetErrorMessage(status),
+	"id": text.id,
+	}))
+}
+// 修改文章
+func ModifyPosts(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			return
+		}
+		switch result := err.(type) {
+		case int :
+			//status := err.(int)
+			w.Write(MapToBody(Map{
+				"status":result,
+				"desc": GetErrorMessage(result),
+			}))
+		default:
+			fmt.Printf("System Error: %v\n", result)
+		}
+	}()
+
+	var status int
+	text(r, "modifauthor", &author);
+	status, err := EditAuthor(&author)
+	if err != nil {
+		fmt.Printf("System Error: %v\n", err)
+		panic(ERROR_DATABASE_WRITE)
+	}
+	w.Write(MapToBody(Map{
+		"status": status,
+		"desc": GetErrorMessage(status),
+	}))
+}
+//查找文章
+func GetPosts(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			return
+		}
+		switch result := err.(type) {
+		case int :
+			//status := err.(int)
+			w.Write(MapToBody(Map{
+				"status":result,
+				"desc": GetErrorMessage(result),
+			}))
+		default:
+			fmt.Printf("System Error: %v\n", result)
+		}
+	}()
+
+	var status int
+	text(r, "modifauthor", &author);
+	status, err := EditAuthor(&author)
+	if err != nil {
+		fmt.Printf("System Error: %v\n", err)
+		panic(ERROR_DATABASE_WRITE)
+	}
+	w.Write(MapToBody(Map{
+		"status": status,
+		"desc": GetErrorMessage(status),
+		"author":author,
+		"title":GetErrorMessage(title),
+		"text":GetErrorMessage(text),
+		"private":private,
+		"draft":draft,
+	}))
+}
+//列出文章
+func ListPosts(w http.ResponseWriter, r *http.Request){
+	defer func() {
+		err := recover()
+		if err == nil {
+			return
+		}
+		switch result := err.(type) {
+		case int :
+			//status := err.(int)
+			w.Write(MapToBody(Map{
+				"status":result,
+				"desc": GetErrorMessage(result),
+			}))
+		default:
+			fmt.Printf("System Error: %v\n", result)
+		}
+	}()
+	var status int
+	text(r, "modifauthor", &author);
+	status, err := EditAuthor(&author)
+	if err != nil {
+		fmt.Printf("System Error: %v\n", err)
+		panic(ERROR_DATABASE_WRITE)
+	}
+	w.Write(MapToBody(Map{
+		"status": status,
+		"desc": GetErrorMessage(status),
+		"result":result,
+	}))
+}
