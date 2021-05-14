@@ -71,7 +71,11 @@ func CheckRole(userRole int, r *http.Request) {
 }
 
 //字段获取并检查
-func MapToStruct(r *http.Request, checkType string, user *Account)  {
+func MapToStruct(w http.ResponseWriter, r *http.Request, checkType string, user *Account)  {
+	defer func() {
+		err := recover()
+		errHandle(w, err)
+	}()
 	params := RequestJsonInterface(r)
 	//类型断言
 	if username, ok := params["username"].(string); !ok {
@@ -182,7 +186,7 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 	}()
 	CheckRole(RoleSuperAdmin, r)
 	var user Account
-	MapToStruct(r, "adduser", &user)
+	MapToStruct(w, r, "adduser", &user)
 	status, err := CreateUser(&user)
 	if err != nil {
 		fmt.Printf("System Error: %v\n",err)
@@ -230,7 +234,7 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 		errHandle(w, err)
 	}()
 	var user Account
-	MapToStruct(r, "modifyuser", &user)
+	MapToStruct(w, r, "modifyuser", &user)
 	cookie, _ := r.Cookie("login")
 	loginId, _ := strconv.Atoi(cookie.Value)
 	status := CheckUserID(user.ID)
@@ -326,7 +330,7 @@ func Join(w http.ResponseWriter, r *http.Request) {
 		errHandle(w, err)
 	}()
 	var user Account
-	MapToStruct(r, "join", &user)
+	MapToStruct(w, r, "join", &user)
 	user.Role = 1
 	status, err := CreateUser(&user)
 	if err != nil {
